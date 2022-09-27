@@ -3,7 +3,7 @@ import { ImageGenRequest, ImageGenResponse } from '@sd-playground/shared-types';
 import axios from 'axios';
 import Image from 'next/image';
 import { useState } from 'react';
-import { useMutation } from 'react-query';
+import { useMutation, useQueryClient } from 'react-query';
 import { getImageUrl, ImageList } from '../components/ImageList';
 
 export function Index() {
@@ -15,6 +15,8 @@ export function Index() {
     imageUrl:
       'generation-5fa765c2-36a2-4b13-8bc0-237c86d0f0e9:0-3c37dd06-0b16-48bb-b894-07b351bdfd70-0.png',
   });
+
+  const queryClient = useQueryClient();
 
   const {
     isLoading,
@@ -38,6 +40,9 @@ export function Index() {
 
         console.log(result);
         dataSet(result.data);
+
+        // force list to reload
+        queryClient.invalidateQueries(['images']);
       },
       onError: (err) => {
         console.log(err);
@@ -60,10 +65,10 @@ export function Index() {
           {isError ? 'error' : ''}
         </>
       </div>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
+      {/* <pre>{JSON.stringify(data, null, 2)}</pre>
       {data && (
         <img src={getImageUrl(data.imageUrl)} height={512} width={512} />
-      )}
+      )} */}
       <ImageList />
     </Container>
   );
