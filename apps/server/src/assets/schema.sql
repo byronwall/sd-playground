@@ -1,0 +1,10 @@
+-- DROP TABLE images;
+CREATE TABLE IF NOT EXISTS images (
+    id VARCHAR(255) PRIMARY KEY,
+    prompt VARCHAR(1024) NOT NULL,
+    seed INT NOT NULL,
+    cfg DOUBLE NOT NULL,
+    url VARCHAR(255) NOT NULL,
+    dateCreated VARCHAR(255) NOT NULL,
+    steps INT NOT NULL
+);

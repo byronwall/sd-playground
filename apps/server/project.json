@@ -6,6 +6,7 @@
     "build": {
       "executor": "@nrwl/webpack:webpack",
       "outputs": ["{options.outputPath}"],
+
       "options": {
         "target": "node",
         "compiler": "tsc",
@@ -18,7 +19,7 @@
         "production": {
           "optimization": true,
           "extractLicenses": true,
-          "inspect": false,
+
           "fileReplacements": [
             {
               "replace": "apps/server/src/environments/environment.ts",
@@ -35,7 +36,8 @@
       },
       "configurations": {
         "production": {
-          "buildTarget": "server:build:production"
+          "buildTarget": "server:build:production",
+          "inspect": false
         }
       }
     },

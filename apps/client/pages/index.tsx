@@ -4,6 +4,7 @@ import axios from 'axios';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useMutation } from 'react-query';
+import { getImageUrl, ImageList } from '../components/ImageList';
 
 export function Index() {
   const [promptText, promptTextSet] = useState(
@@ -61,12 +62,9 @@ export function Index() {
       </div>
       <pre>{JSON.stringify(data, null, 2)}</pre>
       {data && (
-        <img
-          src={`http://localhost:3333/img/${data.imageUrl}`}
-          height={512}
-          width={512}
-        />
+        <img src={getImageUrl(data.imageUrl)} height={512} width={512} />
       )}
+      <ImageList />
     </Container>
   );
 }
