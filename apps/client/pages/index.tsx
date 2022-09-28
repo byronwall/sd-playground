@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from 'react-query';
 
 import { ImageList } from '../components/ImageList';
+import { SdNewImagePrompt } from '../components/SdNewImagePrompt';
 
 export function Index() {
   const [promptText, promptTextSet] = useState(
@@ -52,23 +53,14 @@ export function Index() {
 
   return (
     <Container size="lg">
-      <h1>test a prompt</h1>
-      <TextInput
-        label="test"
-        value={promptText}
-        onChange={(evt) => promptTextSet(evt.target.value)}
-      />
-      <Button onClick={() => onGen()}>Generate image</Button>
+      <SdNewImagePrompt />
       <div className="">
         <>
           {isLoading ? 'updating...' : ''}
           {isError ? 'error' : ''}
         </>
       </div>
-      {/* <pre>{JSON.stringify(data, null, 2)}</pre>
-      {data && (
-        <img src={getImageUrl(data.imageUrl)} height={512} width={512} />
-      )} */}
+
       <ImageList />
     </Container>
   );

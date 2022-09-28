@@ -1,7 +1,5 @@
 import { Group, NumberInput, Radio } from '@mantine/core';
-import { RadioGroup } from '@mantine/core/lib/Radio/RadioGroup/RadioGroup';
 import { SdImage, SdImagePlaceHolder } from '@sd-playground/shared-types';
-import { mainModule } from 'process';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
 

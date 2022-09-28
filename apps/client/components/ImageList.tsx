@@ -30,19 +30,27 @@ export function ImageList() {
   // store focused id in state
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
+  const imageGroups = data.reduce<{ [id: string]: SdImage }>((acc, cur) => {
+    const key = cur.groupId;
+
+    acc[key] = cur;
+
+    return acc;
+  }, {});
+
   return (
     <div>
-      <h1>ImageList</h1>
+      <h1>image groups</h1>
       <div>
         {isLoading ? 'loading...' : ''}
         {isError ? 'error' : ''}
         <SimpleGrid cols={4}>
-          {(data ?? []).map((img) => (
+          {(Object.values(imageGroups) ?? []).map((img) => (
             <Card key={img.id}>
               <HoverCard>
                 <HoverCard.Target>
                   <div onClick={() => setFocusedId(img.groupId)}>
-                    <SdImageComp image={img} size={200}></SdImageComp>
+                    <SdImageComp image={img} size={200} />
                   </div>
                 </HoverCard.Target>
 
@@ -65,7 +73,7 @@ export function ImageList() {
           ))}
         </SimpleGrid>
 
-        <ImageGrid id={focusedId}></ImageGrid>
+        <ImageGrid id={focusedId} />
       </div>
     </div>
   );
