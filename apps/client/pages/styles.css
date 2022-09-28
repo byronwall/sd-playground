@@ -12,6 +12,8 @@ body {
   line-height: inherit;
   margin: auto;
   max-width: 1200px;
+
+  padding-bottom: 150px;
 }
 h1,
 h2,
@@ -398,4 +400,30 @@ summary svg {
   #middle-content {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+table {
+  border: 1px solid #ccc;
+  border-collapse: collapse;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+table tr {
+  border: 1px solid #ddd;
+  padding: 5px;
+}
+table th,
+table td {
+  padding: 10px;
+  text-align: center;
+}
+table th {
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+table td + td {
+  border-left: 2px solid red;
 }

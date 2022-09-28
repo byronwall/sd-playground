@@ -1,6 +1,7 @@
 -- DROP TABLE images;
 CREATE TABLE IF NOT EXISTS images (
     id VARCHAR(255) PRIMARY KEY,
+    groupId VARCHAR(255),
     prompt VARCHAR(1024) NOT NULL,
     seed INT NOT NULL,
     cfg DOUBLE NOT NULL,

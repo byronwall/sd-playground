@@ -8,7 +8,10 @@ import {
   Stack,
 } from '@mantine/core';
 import { SdImage } from '@sd-playground/shared-types';
+import { useState } from 'react';
 import { useQuery } from 'react-query';
+import { ImageGrid } from './ImageGrid';
+import { SdImageComp } from './SdImageComp';
 
 export function getImageUrl(imageUrl: string): string {
   return `http://localhost:3333/img/${imageUrl}`;
@@ -24,6 +27,9 @@ export function ImageList() {
 
   console.log('data', data);
 
+  // store focused id in state
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+
   return (
     <div>
       <h1>ImageList</h1>
@@ -35,10 +41,9 @@ export function ImageList() {
             <Card key={img.id}>
               <HoverCard>
                 <HoverCard.Target>
-                  <img
-                    src={getImageUrl(img.url)}
-                    style={{ aspectRatio: 1, maxWidth: '100%' }}
-                  />
+                  <div onClick={() => setFocusedId(img.groupId)}>
+                    <SdImageComp image={img} size={200}></SdImageComp>
+                  </div>
                 </HoverCard.Target>
 
                 <HoverCard.Dropdown>
@@ -59,6 +64,8 @@ export function ImageList() {
             </Card>
           ))}
         </SimpleGrid>
+
+        <ImageGrid id={focusedId}></ImageGrid>
       </div>
     </div>
   );

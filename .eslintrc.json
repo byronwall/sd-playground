@@ -27,6 +27,19 @@
       "rules": {}
     },
     {
+      "files": ["*.tsx"],
+
+      "rules": {
+        "react/self-closing-comp": [
+          "warn",
+          {
+            "component": true,
+            "html": true
+          }
+        ]
+      }
+    },
+    {
       "files": ["*.js", "*.jsx"],
       "extends": ["plugin:@nrwl/nx/javascript"],
       "rules": {}

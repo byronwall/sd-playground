@@ -1,10 +1,10 @@
 import { Button, Container, TextInput } from '@mantine/core';
 import { ImageGenRequest, ImageGenResponse } from '@sd-playground/shared-types';
 import axios from 'axios';
-import Image from 'next/image';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from 'react-query';
-import { getImageUrl, ImageList } from '../components/ImageList';
+
+import { ImageList } from '../components/ImageList';
 
 export function Index() {
   const [promptText, promptTextSet] = useState(

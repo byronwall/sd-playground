@@ -12,11 +12,16 @@ export interface SdImage {
   steps: number;
   url: string;
   dateCreated: string;
+
+  groupId: string;
 }
 
-export interface ImageGenRequest {
-  prompt: string;
-}
+export type SdImagePlaceHolder = Partial<
+  Omit<SdImage, 'id' | 'dateCreated' | 'url'>
+> &
+  Pick<SdImage, 'prompt'>;
+
+export type ImageGenRequest = SdImagePlaceHolder;
 
 export interface ImageGenResponse {
   imageUrl: string;

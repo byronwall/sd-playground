@@ -8,7 +8,12 @@ import * as cors from 'cors';
 import * as express from 'express';
 
 import * as x from '../env.json';
-import { db_getAllImages, db_insertImage } from './db';
+import {
+  db_getAllImages,
+  db_getImagesFromGroup,
+  db_getSingleImages,
+  db_insertImage,
+} from './db';
 
 const pathToImg = `/Users/byronwall/Projects/sd-playground/apps/server/ext`;
 
@@ -17,6 +22,33 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.get('/api/images/:id', async (req, res) => {
+  // load from db and return
+
+  const id = (req.params as any).id;
+
+  console.log('single image', id);
+
+  const images = await db_getSingleImages(id);
+
+  console.log('images', images);
+
+  res.send(images);
+});
+app.get('/api/images/group/:id', async (req, res) => {
+  // load from db and return
+
+  const groupId = (req.params as any).id;
+
+  console.log('group of  image', groupId);
+
+  const images = await db_getImagesFromGroup(groupId);
+
+  console.log('images', images);
+
+  res.send(images);
+});
 
 app.get('/api/images', async (req, res) => {
   // load from db and return
@@ -30,15 +62,15 @@ app.get('/api/images', async (req, res) => {
 app.post('/api/img_gen', (req, res) => {
   const imgGenReq: ImageGenRequest = req.body as ImageGenRequest;
 
-  console.log(imgGenReq);
-
-  const { prompt } = imgGenReq;
+  console.log('image gen req', imgGenReq);
 
   // send that prompt to the python CLI -- should really be a server
 
-  const seed = Math.floor(Math.random() * 100000);
-  const cfg = 10;
-  const steps = 20;
+  const seed = imgGenReq.seed ?? Math.floor(Math.random() * 100000);
+  const cfg = imgGenReq.cfg ?? 10;
+  const steps = imgGenReq.steps ?? 20;
+  const prompt = imgGenReq.prompt;
+  const groupId = imgGenReq.groupId;
 
   const cmd = `cd ${pathToImg} && STABILITY_KEY=${x.STABILITY_KEY} python3 -m stability_sdk.client -W 512 -H 512 -S ${seed} --cfg ${cfg} --steps ${steps} "${prompt}"`;
 
@@ -64,6 +96,7 @@ app.post('/api/img_gen', (req, res) => {
         steps,
         url: match[1],
         dateCreated: new Date().toISOString(),
+        groupId: groupId ?? getUuid(),
       });
 
       if (match) {
