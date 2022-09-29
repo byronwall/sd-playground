@@ -1,15 +1,8 @@
-import {
-  Card,
-  Container,
-  Grid,
-  Group,
-  HoverCard,
-  SimpleGrid,
-  Stack,
-} from '@mantine/core';
+import { Card, Container, HoverCard, SimpleGrid } from '@mantine/core';
 import { SdImage } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
+
 import { ImageGrid } from './ImageGrid';
 import { SdImageComp } from './SdImageComp';
 
