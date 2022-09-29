@@ -425,5 +425,5 @@ table th {
 }
 
 table td + td {
-  border-left: 2px solid red;
+  border-left: 1px solid #aaa;
 }
