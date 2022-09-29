@@ -25,18 +25,19 @@ export function ImageList() {
     return results;
   });
 
-  console.log('data', data);
-
   // store focused id in state
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
-  const imageGroups = data.reduce<{ [id: string]: SdImage }>((acc, cur) => {
-    const key = cur.groupId;
+  const imageGroups = (data ?? []).reduce<{ [id: string]: SdImage }>(
+    (acc, cur) => {
+      const key = cur.groupId;
 
-    acc[key] = cur;
+      acc[key] = cur;
 
-    return acc;
-  }, {});
+      return acc;
+    },
+    {}
+  );
 
   return (
     <div>

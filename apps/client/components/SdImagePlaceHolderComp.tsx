@@ -2,6 +2,7 @@ import { Button } from '@mantine/core';
 import { SdImagePlaceHolder } from '@sd-playground/shared-types';
 
 import { api_generateImage } from '../model/api';
+import { useAppStore } from '../model/store';
 
 type SdImagePlaceHolderCompProps = {
   size: number;
@@ -12,9 +13,13 @@ export function SdImagePlaceHolderComp(props: SdImagePlaceHolderCompProps) {
   // des props
   const { placeholder, size } = props;
 
-  const handleClick = () => {
+  const onIncrement = useAppStore((s) => s.incrementLoadCount);
+
+  const handleClick = async () => {
     console.log('handleClick - gen image', placeholder);
-    api_generateImage(placeholder);
+    const img = await api_generateImage(placeholder);
+
+    onIncrement();
   };
 
   return (

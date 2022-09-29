@@ -1,7 +1,8 @@
-import { Group, NumberInput, Radio } from '@mantine/core';
+import { Group, NumberInput, Radio, Table } from '@mantine/core';
 import { SdImage, SdImagePlaceHolder } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
+import { useAppStore } from '../model/store';
 
 import { SdImageComp } from './SdImageComp';
 import { SdImagePlaceHolderComp } from './SdImagePlaceHolderComp';
@@ -28,6 +29,8 @@ const colVars: { [E in GridType]: keyof SdImagePlaceHolder } = {
 export function ImageGrid(props: ImageGridProps) {
   // des props
   const { id } = props;
+
+  const loadCount = useAppStore((s) => s.loadCount);
 
   // create a query for 1 id
   const { data, isLoading, isError, error } = useQuery(id, async () => {
@@ -59,7 +62,7 @@ export function ImageGrid(props: ImageGridProps) {
   const colVar = colVars[gridType];
 
   // store cfg delta size in state
-  const [cfgDelta, setCfgDelta] = useState(1);
+  const [cfgDelta, setCfgDelta] = useState(2);
   const [seedDelta, setSeedDelta] = useState(10);
   const [stepsDelta, setStepsDelta] = useState(10);
 
@@ -73,6 +76,8 @@ export function ImageGrid(props: ImageGridProps) {
 
   const middleRow = Math.floor(rowCount / 2);
   const middleCol = Math.floor(colCount / 2);
+
+  const visibleIds: string[] = [];
 
   // iterate over the rows and cols
   for (let row = 0; row < rowCount; row++) {
@@ -103,6 +108,10 @@ export function ImageGrid(props: ImageGridProps) {
         );
       });
 
+      if (found) {
+        visibleIds.push(found.id);
+      }
+
       tableData[row][col] = found ?? placeholder;
     }
   }
@@ -122,18 +131,22 @@ export function ImageGrid(props: ImageGridProps) {
       <div> {isLoading ? 'loading...' : ''} </div>
       <div> {isError ? 'error' : ''} </div>
       <Group>
-        <NumberInput value={rowCount} onChange={setRowCount} />
-        <NumberInput value={colCount} onChange={setColCount} />
-        <NumberInput value={imageSize} onChange={setImageSize} />
+        <NumberInput label="rows" value={rowCount} onChange={setRowCount} />
+        <NumberInput label="cols" value={colCount} onChange={setColCount} />
+        <NumberInput label="size" value={imageSize} onChange={setImageSize} />
       </Group>
 
       <Group title="deltas">
-        <NumberInput value={cfgDelta} onChange={setCfgDelta} />
-        <NumberInput value={seedDelta} onChange={setSeedDelta} />
-        <NumberInput value={stepsDelta} onChange={setStepsDelta} />
+        <NumberInput label="d-cfg" value={cfgDelta} onChange={setCfgDelta} />
+        <NumberInput label="d-seed" value={seedDelta} onChange={setSeedDelta} />
+        <NumberInput
+          label="d-steps"
+          value={stepsDelta}
+          onChange={setStepsDelta}
+        />
       </Group>
 
-      <div style={{ display: 'inline-flex' }}>
+      <div style={{ display: 'inline-flex' }} key={loadCount}>
         <div
           style={{
             display: 'grid',
@@ -162,6 +175,38 @@ export function ImageGrid(props: ImageGridProps) {
             );
           })}
         </div>
+      </div>
+
+      <div>
+        <h3>all images in group</h3>
+        <Table>
+          <thead>
+            <tr>
+              <th>prompt</th>
+              <th>cfg</th>
+              <th>seed</th>
+              <th>steps</th>
+              <th>visible</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data?.map((item) => {
+              return (
+                <tr key={item.id}>
+                  <td>{item.prompt}</td>
+                  <td>{item.cfg}</td>
+                  <td>{item.seed}</td>
+                  <td>{item.steps}</td>
+                  <td>
+                    {visibleIds.find((c) => c === item.id) !== undefined
+                      ? 'true'
+                      : ''}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
       </div>
     </div>
   );
