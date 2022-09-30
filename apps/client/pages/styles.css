@@ -427,3 +427,6 @@ table th {
 table td + td {
   border-left: 1px solid #aaa;
 }
+table th + th {
+  border-left: 1px solid #aaa;
+}

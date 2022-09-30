@@ -1,4 +1,13 @@
-import { Group, NumberInput, Radio, Stack, Switch, Table } from '@mantine/core';
+import {
+  Group,
+  MultiSelect,
+  NumberInput,
+  Radio,
+  Stack,
+  Switch,
+  Table,
+  Title,
+} from '@mantine/core';
 import { SdImage, SdImagePlaceHolder } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
@@ -11,20 +20,31 @@ interface ImageGridProps {
   id: string;
 }
 
-const __GridTypes = ['cfg-seed', 'cfg-steps', 'seed-steps'] as const;
-type GridType = typeof __GridTypes[number];
+// as value label pairs - 4 6 8 10 12 14
+const cfgChoices = [
+  { value: '4', label: '4' },
+  { value: '6', label: '6' },
+  { value: '8', label: '8' },
+  { value: '10', label: '10' },
+  { value: '12', label: '12' },
+  { value: '14', label: '14' },
+];
 
-const rowVars: { [E in GridType]: keyof SdImagePlaceHolder } = {
-  'cfg-seed': 'cfg',
-  'cfg-steps': 'cfg',
-  'seed-steps': 'seed',
-};
+// store step choices -- 20 50
+const stepsChoices = [
+  { value: '20', label: '20' },
+  { value: '50', label: '50' },
+];
 
-const colVars: { [E in GridType]: keyof SdImagePlaceHolder } = {
-  'cfg-seed': 'seed',
-  'cfg-steps': 'steps',
-  'seed-steps': 'steps',
-};
+// store seed choices -- 123123 1321312 3123 32313
+const seedChoices = [
+  { value: '123123', label: '123123' },
+  { value: '1321312', label: '1321312' },
+  { value: '3123', label: '3123' },
+  { value: '32313', label: '32313' },
+];
+
+const variableChoices = ['cfg', 'seed', 'steps'];
 
 export function ImageGrid(props: ImageGridProps) {
   // des props
@@ -41,11 +61,6 @@ export function ImageGrid(props: ImageGridProps) {
     return results;
   });
 
-  // store grid type in state
-  const [gridType, setGridType] = useState<GridType>('cfg-seed');
-
-  console.log('all group images', data);
-
   const mainImage = data?.[0] ?? ({} as SdImagePlaceHolder);
 
   // take those images and push into a table -- by default 3x3 with single image in center
@@ -56,19 +71,29 @@ export function ImageGrid(props: ImageGridProps) {
   const [rowCount, setRowCount] = useState(3);
   const [colCount, setColCount] = useState(3);
 
-  const [showAllCfgs, setShowAllCfgs] = useState(false);
-  const [showAllSeeds, setShowAllSeeds] = useState(false);
-  const [showAllSteps, setShowAllSteps] = useState(false);
+  const [showAllCfgs, setShowAllCfgs] = useState(true);
+  const [showAllSeeds, setShowAllSeeds] = useState(true);
+  const [showAllSteps, setShowAllSteps] = useState(true);
 
   const tableData: Array<Array<SdImage | SdImagePlaceHolder>> = [];
 
-  const rowVar = rowVars[gridType];
-  const colVar = colVars[gridType];
+  // store row and colVar in state
+  const [rowVar, setRowVar] = useState('cfg');
+  const [colVar, setColVar] = useState('seed');
 
   // store cfg delta size in state
   const [cfgDelta, setCfgDelta] = useState(2);
   const [seedDelta, setSeedDelta] = useState(10);
   const [stepsDelta, setStepsDelta] = useState(10);
+
+  // store some cfg and step choices in state also
+  const [cfgChoice, setCfgChoice] = useState<string[]>([]);
+  const [stepsChoice, setStepsChoice] = useState<string[]>([]);
+  const [seedChoice, setSeedChoice] = useState<string[]>([]);
+
+  // track bools to enable the auto gen for row/col
+  const [autoGenRow, setAutoGenRow] = useState(false);
+  const [autoGenCol, setAutoGenCol] = useState(false);
 
   const delta: { [E in keyof SdImagePlaceHolder]: number | undefined } = {
     cfg: cfgDelta,
@@ -83,24 +108,20 @@ export function ImageGrid(props: ImageGridProps) {
 
   const visibleIds: string[] = [];
 
+  const showAllMap = {
+    seed: showAllSeeds,
+    cfg: showAllCfgs,
+    steps: showAllSteps,
+  };
   // map grid types to col var
-  const colShowAll = {
-    'cfg-seed': showAllSeeds,
-    'cfg-steps': showAllSteps,
-    'seed-steps': showAllSteps,
-  }[gridType];
-
-  const rowShowAll = {
-    'cfg-seed': showAllCfgs,
-    'cfg-steps': showAllCfgs,
-    'seed-steps': showAllSeeds,
-  }[gridType];
+  const colShowAll = showAllMap[colVar];
+  const rowShowAll = showAllMap[rowVar];
 
   // build the col headers
   let colHeaders = [];
   if (colShowAll) {
-    colHeaders = Array.from(new Set(data?.map((d) => d[colVar])));
-  } else {
+    colHeaders = uniq(data?.map((d) => d[colVar]));
+  } else if (autoGenCol) {
     // build list from the col count
     for (let col = 0; col < colCount; col++) {
       colHeaders.push(
@@ -112,8 +133,8 @@ export function ImageGrid(props: ImageGridProps) {
   // build the row headers
   let rowHeaders = [];
   if (rowShowAll) {
-    rowHeaders = Array.from(new Set(data?.map((d) => d[rowVar])));
-  } else {
+    rowHeaders = uniq(data?.map((d) => d[rowVar]));
+  } else if (autoGenRow) {
     // build list from the row count
     for (let row = 0; row < rowCount; row++) {
       rowHeaders.push(
@@ -121,6 +142,20 @@ export function ImageGrid(props: ImageGridProps) {
       );
     }
   }
+
+  // add in the must show items from drop down
+  const extraChoiceMap = {
+    seed: seedChoice,
+    cfg: cfgChoice,
+    steps: stepsChoice,
+  };
+
+  extraChoiceMap[colVar].forEach((c) => colHeaders.push(+c));
+  extraChoiceMap[rowVar].forEach((c) => rowHeaders.push(+c));
+
+  // make sure they are unique
+  colHeaders = uniq(colHeaders);
+  rowHeaders = uniq(rowHeaders);
 
   colHeaders.sort((a, b) => a - b);
   rowHeaders.sort((a, b) => a - b);
@@ -167,23 +202,42 @@ export function ImageGrid(props: ImageGridProps) {
   const [imageSize, setImageSize] = useState(200);
 
   const realColCount = colHeaders.length;
-  const realRowCount = rowHeaders.length;
 
   return (
     <div>
-      <h1>ImageGrid</h1>
-      <Radio.Group value={gridType} onChange={setGridType}>
-        <Radio value={__GridTypes[0]} label={__GridTypes[0]} />
-        <Radio value={__GridTypes[1]} label={__GridTypes[1]} />
-        <Radio value={__GridTypes[2]} label={__GridTypes[2]} />
-      </Radio.Group>
+      <Title order={1}>grid of images</Title>
+      <Group>
+        <Radio.Group value={rowVar} onChange={setRowVar}>
+          {variableChoices.map((choice) => (
+            <Radio key={choice} value={choice} label={choice} />
+          ))}
+        </Radio.Group>
+        {/* repeat for col var */}
+        <Radio.Group value={colVar} onChange={setColVar}>
+          {variableChoices.map((choice) => (
+            <Radio key={choice} value={choice} label={choice} />
+          ))}
+        </Radio.Group>
+      </Group>
       <div> {isLoading ? 'loading...' : ''} </div>
       <div> {isError ? 'error' : ''} </div>
       <Stack>
         <Group>
-          <NumberInput label="rows" value={rowCount} onChange={setRowCount} />
-          <NumberInput label="cols" value={colCount} onChange={setColCount} />
           <NumberInput label="size" value={imageSize} onChange={setImageSize} />
+        </Group>
+        <Group>
+          <NumberInput label="rows" value={rowCount} onChange={setRowCount} />
+          <Switch
+            label="auto row"
+            checked={autoGenRow}
+            onChange={(evt) => setAutoGenRow(evt.currentTarget.checked)}
+          />
+          <NumberInput label="cols" value={colCount} onChange={setColCount} />
+          <Switch
+            label="auto col"
+            checked={autoGenCol}
+            onChange={(evt) => setAutoGenCol(evt.currentTarget.checked)}
+          />
         </Group>
         <Group title="deltas">
           <NumberInput label="d-cfg" value={cfgDelta} onChange={setCfgDelta} />
@@ -218,44 +272,84 @@ export function ImageGrid(props: ImageGridProps) {
             onChange={(evt) => setShowAllSteps(evt.currentTarget.checked)}
           />
         </Group>
+        <Group>
+          <MultiSelect
+            label="cfg"
+            data={cfgChoices}
+            value={cfgChoice}
+            onChange={setCfgChoice}
+            clearable
+            searchable
+          />
+          <MultiSelect
+            label="steps"
+            data={stepsChoices}
+            value={stepsChoice}
+            onChange={setStepsChoice}
+            clearable
+            searchable
+          />
+
+          <MultiSelect
+            label="seed"
+            data={seedChoices}
+            value={seedChoice}
+            onChange={setSeedChoice}
+            clearable
+            searchable
+          />
+        </Group>
       </Stack>
 
-      <div style={{ display: 'inline-flex' }} key={loadCount}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${realColCount}, 1fr)`,
-            gap: 10,
-            gridAutoRows: 'minmax(100px, auto)',
-          }}
-        >
-          {tableData.flat().map((cell, rowIdx) => {
-            if (cell === undefined) {
-              return <div key={rowIdx} />;
-            }
-            if (!('id' in cell)) {
-              return (
-                <SdImagePlaceHolderComp
-                  key={rowIdx}
-                  size={imageSize}
-                  placeholder={cell}
-                />
-              );
-            }
-            return (
-              <div key={cell?.id ?? rowIdx}>
-                <SdImageComp image={cell} size={imageSize} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <Stack>
+        {/* map tableData into table */}
+        <Table>
+          <tr>
+            <th />
+            {colHeaders.map((col) => (
+              <th key={col}>{col}</th>
+            ))}
+          </tr>
+          <tbody>
+            {tableData.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                <td>{rowHeaders[rowIndex]}</td>
+                {row.map((cell, colIndex) => {
+                  if (cell === undefined) {
+                    return (
+                      <td key={colIndex}>
+                        <div />
+                      </td>
+                    );
+                  }
+                  if (!('id' in cell)) {
+                    return (
+                      <td key={colIndex}>
+                        <SdImagePlaceHolderComp
+                          size={imageSize}
+                          placeholder={cell}
+                        />
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={cell?.id ?? colIndex}>
+                      <SdImageComp image={cell} size={imageSize} />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Stack>
 
-      <div>
-        <h3>all images in group</h3>
+      <Stack>
+        <Title order={1}>all images in group</Title>
         <Table>
           <thead>
             <tr>
+              <th>image</th>
               <th>prompt</th>
               <th>cfg</th>
               <th>seed</th>
@@ -267,6 +361,9 @@ export function ImageGrid(props: ImageGridProps) {
             {data?.map((item) => {
               return (
                 <tr key={item.id}>
+                  <td>
+                    <SdImageComp image={item} size={150} />{' '}
+                  </td>
                   <td>{item.prompt}</td>
                   <td>{item.cfg}</td>
                   <td>{item.seed}</td>
@@ -281,7 +378,11 @@ export function ImageGrid(props: ImageGridProps) {
             })}
           </tbody>
         </Table>
-      </div>
+      </Stack>
     </div>
   );
+}
+
+function uniq(arr: any[]) {
+  return [...new Set(arr)];
 }
