@@ -10,7 +10,7 @@ The goal is to allow the user to vary a given part of the prompt through a range
 
 Current support is for the `cfg`, `steps`, and `seed` parameters. The end goal is to add support for altering prompts in various ways too.
 
-## Screenshot
+## Screenshots
 
 ### Showing the prompt input and already generated groups
 

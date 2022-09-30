@@ -300,12 +300,14 @@ export function ImageGrid(props: ImageGridProps) {
       <Stack>
         {/* map tableData into table */}
         <Table>
-          <tr>
-            <th />
-            {colHeaders.map((col) => (
-              <th key={col}>{col}</th>
-            ))}
-          </tr>
+          <thead>
+            <tr>
+              <th />
+              {colHeaders.map((col) => (
+                <th key={col}>{col}</th>
+              ))}
+            </tr>
+          </thead>
           <tbody>
             {tableData.map((row, rowIndex) => (
               <tr key={rowIndex}>
