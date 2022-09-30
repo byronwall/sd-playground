@@ -23,6 +23,14 @@ Current support is for the `cfg`, `steps`, and `seed` parameters. The end goal i
 
 ![](docs/grid_overview.png)
 
+### Showing a table of results
+
+![](docs/table-view.png)
+
+### Controls for grid display
+
+![](docs/grid-controls.png)
+
 ## Technology
 
 Rough notes:
@@ -35,4 +43,5 @@ Rough notes:
   - There is a `sqlite` database to track the generated images and communicate to the front end.
 - Front end = Next.js set up
   - End goal will deploy to Vercel.
+  - Using `mantine` for the UI components -- normally I use BlueprintJS... trying something new
 - Shared types related to the `SdImage` and related types
