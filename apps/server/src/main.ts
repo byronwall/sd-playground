@@ -54,7 +54,7 @@ app.get('/api/images', async (req, res) => {
   // load from db and return
   const images = await db_getAllImages();
 
-  console.log('images', images);
+  console.log('images found: ', images.length);
 
   res.send(images);
 });
@@ -76,7 +76,7 @@ app.post('/api/img_gen', (req, res) => {
 
   const imgRegex = /wrote ARTIFACT_IMAGE to (.*?.png)/;
 
-  const child = exec(cmd, (error, stdout, stderr) => {
+  const child = exec(cmd, async (error, stdout, stderr) => {
     if (error) {
       console.error(+new Date(), `error: ${error.message}`);
 
@@ -88,7 +88,7 @@ app.post('/api/img_gen', (req, res) => {
     if (stderr) {
       const match = stderr.match(imgRegex);
 
-      db_insertImage({
+      await db_insertImage({
         id: getUuid(),
         prompt,
         seed,

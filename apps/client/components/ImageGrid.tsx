@@ -11,13 +11,12 @@ import {
 import { SdImage, SdImagePlaceHolder } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
-import { useAppStore } from '../model/store';
 
 import { SdImageComp } from './SdImageComp';
 import { SdImagePlaceHolderComp } from './SdImagePlaceHolderComp';
 
 interface ImageGridProps {
-  id: string;
+  groupId: string;
 }
 
 // as value label pairs - 4 6 8 10 12 14
@@ -36,26 +35,27 @@ const stepsChoices = [
   { value: '50', label: '50' },
 ];
 
-// store seed choices -- 123123 1321312 3123 32313
+// store seed choices -- 123123 1321312 3123 32313 555 6879 109873
 const seedChoices = [
   { value: '123123', label: '123123' },
   { value: '1321312', label: '1321312' },
   { value: '3123', label: '3123' },
   { value: '32313', label: '32313' },
+  { value: '555', label: '555' },
+  { value: '6879', label: '6879' },
+  { value: '109873', label: '109873' },
 ];
 
 const variableChoices = ['cfg', 'seed', 'steps'];
 
 export function ImageGrid(props: ImageGridProps) {
   // des props
-  const { id } = props;
-
-  const loadCount = useAppStore((s) => s.loadCount);
+  const { groupId } = props;
 
   // create a query for 1 id
-  const { data, isLoading, isError, error } = useQuery(id, async () => {
+  const { data, isLoading, isError, error } = useQuery(groupId, async () => {
     const res = await fetch(
-      `http://localhost:3333/api/images/group/${props.id}`
+      `http://localhost:3333/api/images/group/${props.groupId}`
     );
     const results = (await res.json()) as SdImage[];
     return results;
@@ -197,11 +197,7 @@ export function ImageGrid(props: ImageGridProps) {
     }
   }
 
-  console.log('tableData', tableData);
-
   const [imageSize, setImageSize] = useState(200);
-
-  const realColCount = colHeaders.length;
 
   return (
     <div>

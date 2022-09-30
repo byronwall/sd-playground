@@ -32,13 +32,12 @@ function createDbTables() {
 export function db_getAllImages() {
   connectToDatabase();
 
-  return new Promise((resolve, reject) => {
+  return new Promise<SdImage[]>((resolve, reject) => {
     db.all('SELECT * FROM images', (err, rows) => {
       if (err) {
         reject(err);
       }
 
-      console.log(rows);
       resolve(rows);
     });
   });
@@ -67,7 +66,6 @@ export function db_getImagesFromGroup(groupId: string) {
         reject(err);
       }
 
-      console.log(rows);
       resolve(rows);
     });
   });

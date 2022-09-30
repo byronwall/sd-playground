@@ -1,8 +1,9 @@
-import { Button } from '@mantine/core';
+import { Button, Loader } from '@mantine/core';
 import { SdImagePlaceHolder } from '@sd-playground/shared-types';
+import { useState } from 'react';
+import { useQueryClient } from 'react-query';
 
 import { api_generateImage } from '../model/api';
-import { useAppStore } from '../model/store';
 
 type SdImagePlaceHolderCompProps = {
   size: number;
@@ -13,13 +14,17 @@ export function SdImagePlaceHolderComp(props: SdImagePlaceHolderCompProps) {
   // des props
   const { placeholder, size } = props;
 
-  const onIncrement = useAppStore((s) => s.incrementLoadCount);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const handleClick = async () => {
     console.log('handleClick - gen image', placeholder);
-    const img = await api_generateImage(placeholder);
+    setIsLoading(true);
+    await api_generateImage(placeholder);
+    setIsLoading(false);
 
-    onIncrement();
+    queryClient.invalidateQueries();
   };
 
   return (
@@ -34,7 +39,7 @@ export function SdImagePlaceHolderComp(props: SdImagePlaceHolderCompProps) {
       <p>cfg = {placeholder.cfg}</p>
       <p>steps = {placeholder.steps}</p>
 
-      <Button onClick={handleClick}>gen</Button>
+      {isLoading ? <Loader /> : <Button onClick={handleClick}>gen</Button>}
     </div>
   );
 }

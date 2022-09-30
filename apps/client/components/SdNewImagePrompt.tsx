@@ -1,38 +1,55 @@
-import { Button, Group, NumberInput, Stack, Textarea } from '@mantine/core';
+import {
+  Button,
+  Group,
+  Loader,
+  NumberInput,
+  Stack,
+  Textarea,
+  Title,
+} from '@mantine/core';
 import { useState } from 'react';
 
 import { api_generateImage } from '../model/api';
 
 export function SdNewImagePrompt() {
-  // store image props in state
   const [promptText, promptTextSet] = useState('');
-  //cfg in state
   const [cfg, cfgSet] = useState(10);
-
-  // steps
   const [steps, stepsSet] = useState(20);
 
-  const onGen = () => {
-    api_generateImage({
+  const [seed, seedSet] = useState(0);
+
+  // isloading
+  const [isLoading, setIsLoading] = useState(false);
+
+  const onGen = async () => {
+    setIsLoading(true);
+    await api_generateImage({
       prompt: promptText,
       cfg: cfg,
       steps: steps,
+      seed: seed,
     });
+    setIsLoading(false);
   };
 
   return (
     <Stack>
-      <h1>test a prompt</h1>
+      <Title order={1}>test a prompt</Title>
+      <Textarea
+        label="prompt"
+        value={promptText}
+        onChange={(evt) => promptTextSet(evt.target.value)}
+        style={{ minWidth: 400 }}
+      />
       <Group align={'flex-start'}>
-        <Textarea
-          label="prompt"
-          value={promptText}
-          onChange={(evt) => promptTextSet(evt.target.value)}
-          style={{ minWidth: 400 }}
-        />
         <NumberInput label="cfg" value={cfg} onChange={cfgSet} />
         <NumberInput label="steps" value={steps} onChange={stepsSet} />
-        <Button onClick={() => onGen()}>Generate image</Button>
+        <NumberInput label="seed" value={seed} onChange={seedSet} />
+        {isLoading ? (
+          <Loader />
+        ) : (
+          <Button onClick={() => onGen()}>Generate image</Button>
+        )}
       </Group>
     </Stack>
   );

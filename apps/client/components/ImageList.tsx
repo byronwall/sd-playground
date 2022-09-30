@@ -41,33 +41,14 @@ export function ImageList() {
         <SimpleGrid cols={4}>
           {(Object.values(imageGroups) ?? []).map((img) => (
             <Card key={img.id}>
-              <HoverCard>
-                <HoverCard.Target>
-                  <div onClick={() => setFocusedId(img.groupId)}>
-                    <SdImageComp image={img} size={200} disablePopover />
-                  </div>
-                </HoverCard.Target>
-
-                <HoverCard.Dropdown>
-                  <Container size="sm">
-                    {/* dump all props of SdImage */}
-                    <p>
-                      <b> {img.prompt} </b>
-                    </p>
-                    <p> {img.id} </p>
-                    <p>url: {img.url} </p>
-                    <p>date: {img.dateCreated} </p>
-                    <p> cfg: {img.cfg}</p>
-                    <p>seed: {img.seed}</p>
-                    <p>steps: {img.steps} </p>
-                  </Container>
-                </HoverCard.Dropdown>
-              </HoverCard>
+              <div onClick={() => setFocusedId(img.groupId)}>
+                <SdImageComp image={img} size={200} disablePopover />
+              </div>
             </Card>
           ))}
         </SimpleGrid>
 
-        <ImageGrid id={focusedId} />
+        <ImageGrid groupId={focusedId} />
       </div>
     </div>
   );
