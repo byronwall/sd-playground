@@ -44,7 +44,7 @@ export function ImageList() {
               <HoverCard>
                 <HoverCard.Target>
                   <div onClick={() => setFocusedId(img.groupId)}>
-                    <SdImageComp image={img} size={200} />
+                    <SdImageComp image={img} size={200} disablePopover />
                   </div>
                 </HoverCard.Target>
 
