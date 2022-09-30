@@ -1,4 +1,4 @@
-import { Group, NumberInput, Radio, Table } from '@mantine/core';
+import { Group, NumberInput, Radio, Stack, Switch, Table } from '@mantine/core';
 import { SdImage, SdImagePlaceHolder } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
@@ -56,6 +56,10 @@ export function ImageGrid(props: ImageGridProps) {
   const [rowCount, setRowCount] = useState(3);
   const [colCount, setColCount] = useState(3);
 
+  const [showAllCfgs, setShowAllCfgs] = useState(false);
+  const [showAllSeeds, setShowAllSeeds] = useState(false);
+  const [showAllSteps, setShowAllSteps] = useState(false);
+
   const tableData: Array<Array<SdImage | SdImagePlaceHolder>> = [];
 
   const rowVar = rowVars[gridType];
@@ -79,13 +83,55 @@ export function ImageGrid(props: ImageGridProps) {
 
   const visibleIds: string[] = [];
 
+  // map grid types to col var
+  const colShowAll = {
+    'cfg-seed': showAllSeeds,
+    'cfg-steps': showAllSteps,
+    'seed-steps': showAllSteps,
+  }[gridType];
+
+  const rowShowAll = {
+    'cfg-seed': showAllCfgs,
+    'cfg-steps': showAllCfgs,
+    'seed-steps': showAllSeeds,
+  }[gridType];
+
+  // build the col headers
+  let colHeaders = [];
+  if (colShowAll) {
+    colHeaders = Array.from(new Set(data?.map((d) => d[colVar])));
+  } else {
+    // build list from the col count
+    for (let col = 0; col < colCount; col++) {
+      colHeaders.push(
+        +mainImage[colVar] + (col - middleCol) * (delta[colVar] ?? 0)
+      );
+    }
+  }
+
+  // build the row headers
+  let rowHeaders = [];
+  if (rowShowAll) {
+    rowHeaders = Array.from(new Set(data?.map((d) => d[rowVar])));
+  } else {
+    // build list from the row count
+    for (let row = 0; row < rowCount; row++) {
+      rowHeaders.push(
+        +mainImage[rowVar] + (row - middleRow) * (delta[rowVar] ?? 0)
+      );
+    }
+  }
+
+  colHeaders.sort((a, b) => a - b);
+  rowHeaders.sort((a, b) => a - b);
+
   // iterate over the rows and cols
-  for (let row = 0; row < rowCount; row++) {
+  for (let row = 0; row < rowHeaders.length; row++) {
     // create a new row
 
     tableData.push([]);
 
-    for (let col = 0; col < colCount; col++) {
+    for (let col = 0; col < colHeaders.length; col++) {
       // settings for this item
       const placeholder = {
         prompt: mainImage.prompt,
@@ -93,8 +139,8 @@ export function ImageGrid(props: ImageGridProps) {
         cfg: mainImage.cfg,
         seed: mainImage.seed,
         steps: mainImage.steps,
-        [rowVar]: +mainImage[rowVar] + (row - middleRow) * (delta[rowVar] ?? 0),
-        [colVar]: +mainImage[colVar] + (col - middleCol) * (delta[colVar] ?? 0),
+        [rowVar]: rowHeaders[row],
+        [colVar]: colHeaders[col],
       } as SdImagePlaceHolder;
 
       // search through group to see if item exists
@@ -120,6 +166,9 @@ export function ImageGrid(props: ImageGridProps) {
 
   const [imageSize, setImageSize] = useState(200);
 
+  const realColCount = colHeaders.length;
+  const realRowCount = rowHeaders.length;
+
   return (
     <div>
       <h1>ImageGrid</h1>
@@ -130,27 +179,52 @@ export function ImageGrid(props: ImageGridProps) {
       </Radio.Group>
       <div> {isLoading ? 'loading...' : ''} </div>
       <div> {isError ? 'error' : ''} </div>
-      <Group>
-        <NumberInput label="rows" value={rowCount} onChange={setRowCount} />
-        <NumberInput label="cols" value={colCount} onChange={setColCount} />
-        <NumberInput label="size" value={imageSize} onChange={setImageSize} />
-      </Group>
+      <Stack>
+        <Group>
+          <NumberInput label="rows" value={rowCount} onChange={setRowCount} />
+          <NumberInput label="cols" value={colCount} onChange={setColCount} />
+          <NumberInput label="size" value={imageSize} onChange={setImageSize} />
+        </Group>
+        <Group title="deltas">
+          <NumberInput label="d-cfg" value={cfgDelta} onChange={setCfgDelta} />
+          <NumberInput
+            label="d-seed"
+            value={seedDelta}
+            onChange={setSeedDelta}
+          />
+          <NumberInput
+            label="d-steps"
+            value={stepsDelta}
+            onChange={setStepsDelta}
+          />
+        </Group>
+        <Group>
+          {/* build switches for teh show alls */}
+          <Switch
+            label="show all cfg"
+            checked={showAllCfgs}
+            onChange={(evt) => setShowAllCfgs(evt.currentTarget.checked)}
+          />
 
-      <Group title="deltas">
-        <NumberInput label="d-cfg" value={cfgDelta} onChange={setCfgDelta} />
-        <NumberInput label="d-seed" value={seedDelta} onChange={setSeedDelta} />
-        <NumberInput
-          label="d-steps"
-          value={stepsDelta}
-          onChange={setStepsDelta}
-        />
-      </Group>
+          <Switch
+            label="show all seed"
+            checked={showAllSeeds}
+            onChange={(evt) => setShowAllSeeds(evt.currentTarget.checked)}
+          />
+
+          <Switch
+            label="show all steps"
+            checked={showAllSteps}
+            onChange={(evt) => setShowAllSteps(evt.currentTarget.checked)}
+          />
+        </Group>
+      </Stack>
 
       <div style={{ display: 'inline-flex' }} key={loadCount}>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: `repeat(${colCount}, 1fr)`,
+            gridTemplateColumns: `repeat(${realColCount}, 1fr)`,
             gap: 10,
             gridAutoRows: 'minmax(100px, auto)',
           }}
