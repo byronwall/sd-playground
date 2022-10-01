@@ -27,6 +27,10 @@ Current support is for the `cfg`, `steps`, and `seed` parameters. The end goal i
 
 ![](docs/table-view.png)
 
+### Table of results varying the artist
+
+![](docs/vary-artist.png)
+
 ### Controls for grid display
 
 ![](docs/grid-controls.png)
