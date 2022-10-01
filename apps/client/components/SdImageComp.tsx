@@ -1,5 +1,5 @@
 import { Popover, Stack } from '@mantine/core';
-import { SdImage } from '@sd-playground/shared-types';
+import { getTextForBreakdown, SdImage } from '@sd-playground/shared-types';
 import { getImageUrl } from './ImageList';
 
 type SdImageCompProps = {
@@ -46,7 +46,9 @@ export function SdImageComp(props: SdImageCompProps) {
                 aspectRatio: 1,
               }}
             />
-            <div style={{ width: '100%' }}>{image.prompt}</div>
+            <div style={{ width: '100%' }}>
+              {getTextForBreakdown(image.promptBreakdown)}
+            </div>
           </div>
         </Stack>
       </Popover.Dropdown>

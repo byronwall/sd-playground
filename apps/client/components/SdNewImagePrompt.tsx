@@ -4,17 +4,17 @@ import {
   Loader,
   NumberInput,
   Stack,
-  Textarea,
   Title,
 } from '@mantine/core';
-import { useState } from 'react';
-
-import { api_generateImage } from '../model/api';
 import {
   getBreakdownForText,
   PromptBreakdown,
-  PromptEditor,
-} from './PromptEditor';
+} from '@sd-playground/shared-types';
+import { useState } from 'react';
+import { useQueryClient } from 'react-query';
+
+import { api_generateImage } from '../model/api';
+import { PromptEditor } from './PromptEditor';
 
 export function SdNewImagePrompt() {
   const [promptText, promptTextSet] = useState(
@@ -25,24 +25,25 @@ export function SdNewImagePrompt() {
 
   const [seed, seedSet] = useState(0);
 
-  // isloading
   const [isLoading, setIsLoading] = useState(false);
+
+  const [breakdown, setBreakdown] = useState<PromptBreakdown>(
+    getBreakdownForText(promptText)
+  );
+
+  const queryClient = useQueryClient();
 
   const onGen = async () => {
     setIsLoading(true);
     await api_generateImage({
-      prompt: promptText,
+      promptBreakdown: breakdown,
       cfg: cfg,
       steps: steps,
       seed: seed,
     });
     setIsLoading(false);
+    queryClient.invalidateQueries();
   };
-
-  // store  abreakdonw in state
-  const [breakdown, setBreakdown] = useState<PromptBreakdown>(
-    getBreakdownForText(promptText)
-  );
 
   return (
     <Stack>

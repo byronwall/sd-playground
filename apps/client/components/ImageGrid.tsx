@@ -1,3 +1,4 @@
+import * as deepEqual from 'deep-equal';
 import {
   Group,
   MultiSelect,
@@ -8,12 +9,18 @@ import {
   Table,
   Title,
 } from '@mantine/core';
-import { SdImage, SdImagePlaceHolder } from '@sd-playground/shared-types';
+import {
+  getTextForBreakdown,
+  PromptBreakdown,
+  SdImage,
+  SdImagePlaceHolder,
+} from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
 
 import { SdImageComp } from './SdImageComp';
 import { SdImagePlaceHolderComp } from './SdImagePlaceHolderComp';
+import { artists } from '../model/choices';
 
 interface ImageGridProps {
   groupId: string;
@@ -46,7 +53,9 @@ const seedChoices = [
   { value: '109873', label: '109873' },
 ];
 
-const variableChoices = ['cfg', 'seed', 'steps'];
+const artistChoices = artists.map((c) => ({ value: 'by ' + c, label: c }));
+
+const variableChoices = ['cfg', 'seed', 'steps', 'artist'];
 
 export function ImageGrid(props: ImageGridProps) {
   // des props
@@ -61,7 +70,9 @@ export function ImageGrid(props: ImageGridProps) {
     return results;
   });
 
-  const mainImage = data?.[0] ?? ({} as SdImagePlaceHolder);
+  const mainImage: SdImage = data?.[0] ?? ({} as SdImage);
+
+  console.log('mainImage', mainImage);
 
   // take those images and push into a table -- by default 3x3 with single image in center
 
@@ -74,6 +85,7 @@ export function ImageGrid(props: ImageGridProps) {
   const [showAllCfgs, setShowAllCfgs] = useState(true);
   const [showAllSeeds, setShowAllSeeds] = useState(true);
   const [showAllSteps, setShowAllSteps] = useState(true);
+  const [showAllArtists, setShowAllArtists] = useState(true);
 
   const tableData: Array<Array<SdImage | SdImagePlaceHolder>> = [];
 
@@ -90,6 +102,7 @@ export function ImageGrid(props: ImageGridProps) {
   const [cfgChoice, setCfgChoice] = useState<string[]>([]);
   const [stepsChoice, setStepsChoice] = useState<string[]>([]);
   const [seedChoice, setSeedChoice] = useState<string[]>([]);
+  const [artistChoice, setArtistChoice] = useState<string[]>([]);
 
   // track bools to enable the auto gen for row/col
   const [autoGenRow, setAutoGenRow] = useState(false);
@@ -99,7 +112,7 @@ export function ImageGrid(props: ImageGridProps) {
     cfg: cfgDelta,
     seed: seedDelta,
     steps: stepsDelta,
-    prompt: undefined,
+    promptBreakdown: undefined,
     groupId: undefined,
   };
 
@@ -112,6 +125,7 @@ export function ImageGrid(props: ImageGridProps) {
     seed: showAllSeeds,
     cfg: showAllCfgs,
     steps: showAllSteps,
+    artist: showAllArtists,
   };
   // map grid types to col var
   const colShowAll = showAllMap[colVar];
@@ -120,7 +134,11 @@ export function ImageGrid(props: ImageGridProps) {
   // build the col headers
   let colHeaders = [];
   if (colShowAll) {
-    colHeaders = uniq(data?.map((d) => d[colVar]));
+    colHeaders = uniq(
+      data?.map((d) =>
+        colVar === 'artist' ? getArtist(d.promptBreakdown) : d[colVar]
+      )
+    );
   } else if (autoGenCol) {
     // build list from the col count
     for (let col = 0; col < colCount; col++) {
@@ -133,7 +151,11 @@ export function ImageGrid(props: ImageGridProps) {
   // build the row headers
   let rowHeaders = [];
   if (rowShowAll) {
-    rowHeaders = uniq(data?.map((d) => d[rowVar]));
+    rowHeaders = uniq(
+      data?.map((d) =>
+        rowVar === 'artist' ? getArtist(d.promptBreakdown) : d[rowVar]
+      )
+    );
   } else if (autoGenRow) {
     // build list from the row count
     for (let row = 0; row < rowCount; row++) {
@@ -148,10 +170,15 @@ export function ImageGrid(props: ImageGridProps) {
     seed: seedChoice,
     cfg: cfgChoice,
     steps: stepsChoice,
+    artist: artistChoice,
   };
 
-  extraChoiceMap[colVar].forEach((c) => colHeaders.push(+c));
-  extraChoiceMap[rowVar].forEach((c) => rowHeaders.push(+c));
+  extraChoiceMap[colVar].forEach((c) =>
+    colHeaders.push(colVar === 'artist' ? c : +c)
+  );
+  extraChoiceMap[rowVar].forEach((c) =>
+    rowHeaders.push(rowVar === 'artist' ? c : +c)
+  );
 
   // make sure they are unique
   colHeaders = uniq(colHeaders);
@@ -168,21 +195,38 @@ export function ImageGrid(props: ImageGridProps) {
 
     for (let col = 0; col < colHeaders.length; col++) {
       // settings for this item
-      const placeholder = {
-        prompt: mainImage.prompt,
-        groupId: mainImage.groupId,
-        cfg: mainImage.cfg,
-        seed: mainImage.seed,
-        steps: mainImage.steps,
-        [rowVar]: rowHeaders[row],
-        [colVar]: colHeaders[col],
-      } as SdImagePlaceHolder;
+
+      const { url, id, ...restOfImage } = mainImage;
+
+      const placeholder: SdImagePlaceHolder = {
+        ...restOfImage,
+      };
+
+      if (colVar === 'artist') {
+        placeholder.promptBreakdown = adjustArtist(
+          placeholder.promptBreakdown,
+          colHeaders[col]
+        );
+      } else {
+        placeholder[colVar] = colHeaders[col];
+      }
+
+      if (rowVar === 'artist') {
+        placeholder.promptBreakdown = adjustArtist(
+          placeholder.promptBreakdown,
+          rowHeaders[row]
+        );
+      } else {
+        placeholder[rowVar] = rowHeaders[row];
+      }
+
+      console.log('placeholder', placeholder);
 
       // search through group to see if item exists
 
       const found = data?.find((item) => {
         return (
-          item.prompt === placeholder.prompt &&
+          deepEqual(item.promptBreakdown, placeholder.promptBreakdown) &&
           item.cfg === placeholder.cfg &&
           item.seed === placeholder.seed &&
           item.steps === placeholder.steps
@@ -294,6 +338,15 @@ export function ImageGrid(props: ImageGridProps) {
             clearable
             searchable
           />
+
+          <MultiSelect
+            label="artist"
+            data={artistChoices}
+            value={artistChoice}
+            onChange={setArtistChoice}
+            clearable
+            searchable
+          />
         </Group>
       </Stack>
 
@@ -361,7 +414,7 @@ export function ImageGrid(props: ImageGridProps) {
                   <td>
                     <SdImageComp image={item} size={150} />{' '}
                   </td>
-                  <td>{item.prompt}</td>
+                  <td>{getTextForBreakdown(item.promptBreakdown)}</td>
                   <td>{item.cfg}</td>
                   <td>{item.seed}</td>
                   <td>{item.steps}</td>
@@ -382,4 +435,34 @@ export function ImageGrid(props: ImageGridProps) {
 
 function uniq(arr: any[]) {
   return [...new Set(arr)];
+}
+
+function adjustArtist(
+  breakdown: PromptBreakdown,
+  newArtist: string
+): PromptBreakdown {
+  // return orignal if arist is present
+  const wasFound = breakdown.parts.find(
+    (c) => c.label === 'artist' && c.text === newArtist
+  );
+
+  if (wasFound) {
+    return breakdown;
+  }
+  const newBreakdown = { ...breakdown };
+
+  // remove all artists -- and then add the new one
+  const newParts = newBreakdown.parts.filter((c) => c.label !== 'artist');
+  newParts.push({ label: 'artist', text: newArtist });
+
+  newBreakdown.parts = newParts;
+  return newBreakdown;
+}
+
+function getArtist(breakdown: PromptBreakdown): string {
+  const artistPart = breakdown.parts.find((c) => c.label === 'artist');
+  if (artistPart === undefined) {
+    return '';
+  }
+  return artistPart.text;
 }

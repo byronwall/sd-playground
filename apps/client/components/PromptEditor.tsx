@@ -1,47 +1,15 @@
-import { Button, Textarea, Title, useMantineTheme } from '@mantine/core';
+import { Button, Group, Textarea, Title, useMantineTheme } from '@mantine/core';
+import {
+  PromptBreakdown,
+  BreakdownType,
+  PromptBreakdownSortOrder,
+  getTextForBreakdown,
+  getBreakdownForText,
+} from '@sd-playground/shared-types';
 import { useEffect, useState } from 'react';
 
+import { HoverPopover } from './HoverPopover';
 import { pickTextColorBasedOnBgColorAdvanced } from './pickTextColorBasedOnBgColorAdvanced';
-
-export interface PromptPart {
-  text: string;
-  label: BreakdownType;
-}
-
-type BreakdownType = 'main' | 'artist' | 'style' | 'makeItGood' | 'unknown';
-
-export interface PromptBreakdown {
-  parts: PromptPart[];
-}
-
-const sortOrder: BreakdownType[] = [
-  'main',
-  'artist',
-  'style',
-  'makeItGood',
-  'unknown',
-];
-
-function getTextForBreakdown(breakdown: PromptBreakdown) {
-  // sort based on type
-  const sortedParts = [...breakdown.parts].sort((a, b) => {
-    return sortOrder.indexOf(a.label) - sortOrder.indexOf(b.label);
-  });
-  return sortedParts.map((c) => c.text).join(', ');
-}
-
-export function getBreakdownForText(text: string): PromptBreakdown {
-  const parts = text.split(',').map((c) => c.trim());
-  const breakdown: PromptBreakdown = {
-    parts: parts.map((c) => {
-      return {
-        text: c,
-        label: 'unknown',
-      };
-    }),
-  };
-  return breakdown;
-}
 
 interface PromptEditorProps {
   //   initialPrompt?: string;
@@ -107,7 +75,7 @@ export function PromptEditor(props: PromptEditorProps) {
     'lime',
   ];
 
-  const colorLookup = sortOrder.reduce((acc, type, i) => {
+  const colorLookup = PromptBreakdownSortOrder.reduce((acc, type, i) => {
     const key = colorKeys[i];
     acc[type] = i; //theme.colors[key][9];
     return acc;
@@ -128,6 +96,24 @@ export function PromptEditor(props: PromptEditorProps) {
     });
   };
 
+  const handlePromptReorder = () => {
+    const text = getTextForBreakdown(prompt);
+    const newBreakdown = getBreakdownForText(text);
+
+    // prev hash
+    const prevHash = prompt.parts.reduce((acc, c) => {
+      acc[c.text] = c.label;
+      return acc;
+    }, {} as Record<string, string>);
+
+    // apply hash to new breakdown
+    newBreakdown.parts.forEach((c) => {
+      c.label = prevHash[c.text] as BreakdownType;
+    });
+
+    setPrompt(newBreakdown);
+  };
+
   return (
     <div {...rest}>
       <Title order={2}>prompt editor</Title>
@@ -139,6 +125,9 @@ export function PromptEditor(props: PromptEditorProps) {
         style={{ minWidth: 400 }}
       />
       <div>
+        <div>
+          <Button onClick={handlePromptReorder}>reorder</Button>
+        </div>
         {prompt.parts.map((part, idx) => {
           const chunk = part.text;
           const colorIndex = colorLookup[part.label];
@@ -174,6 +163,32 @@ export function PromptEditor(props: PromptEditorProps) {
                 >
                   x
                 </Button>
+
+                <HoverPopover color={colorName}>
+                  {/* button per type */}
+                  <Group>
+                    {PromptBreakdownSortOrder.map((type) => {
+                      const colorIndex = colorLookup[type];
+                      const colorName = colorKeys[colorIndex];
+                      return (
+                        <Button
+                          key={type}
+                          onClick={() => {
+                            const newParts = [...prompt.parts];
+                            newParts[idx].label = type;
+                            setPrompt({
+                              parts: newParts,
+                            });
+                          }}
+                          color={colorName}
+                          variant={part.label === type ? 'filled' : 'outline'}
+                        >
+                          {type}
+                        </Button>
+                      );
+                    })}
+                  </Group>
+                </HoverPopover>
               </div>
             </>
           );

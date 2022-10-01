@@ -38,6 +38,7 @@ export function db_getAllImages() {
         reject(err);
       }
 
+      rows.forEach(convertSqliteToObj);
       resolve(rows);
     });
   });
@@ -53,6 +54,7 @@ export function db_getSingleImages(id: string) {
       }
 
       console.log(row);
+      convertSqliteToObj(row);
       resolve(row);
     });
   });
@@ -66,9 +68,19 @@ export function db_getImagesFromGroup(groupId: string) {
         reject(err);
       }
 
+      rows.forEach(convertSqliteToObj);
+
       resolve(rows);
     });
   });
+}
+
+type SdImageSqlite = Omit<SdImage, 'promptBreakdown'> & {
+  promptBreakdown: string;
+};
+
+function convertSqliteToObj(sqliteObj: SdImageSqlite) {
+  sqliteObj.promptBreakdown = JSON.parse(sqliteObj.promptBreakdown);
 }
 
 export function db_insertImage(image: SdImage) {
@@ -76,12 +88,12 @@ export function db_insertImage(image: SdImage) {
   return new Promise((resolve, reject) => {
     db.run(
       `
-    INSERT INTO images (id, prompt, seed, cfg, url, dateCreated, steps, groupId)
+    INSERT INTO images (id, promptBreakdown, seed, cfg, url, dateCreated, steps, groupId)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         image.id,
-        image.prompt,
+        JSON.stringify(image.promptBreakdown),
         image.seed,
         image.cfg,
         image.url,

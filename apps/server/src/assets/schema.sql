@@ -2,7 +2,8 @@
 CREATE TABLE IF NOT EXISTS images (
     id VARCHAR(255) PRIMARY KEY,
     groupId VARCHAR(255),
-    prompt VARCHAR(1024) NOT NULL,
+    promptBreakdown TEXT NOT NULL,
+    -- JSON
     seed INT NOT NULL,
     cfg DOUBLE NOT NULL,
     url VARCHAR(255) NOT NULL,

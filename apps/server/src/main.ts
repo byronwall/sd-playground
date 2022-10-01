@@ -2,7 +2,11 @@
  * This is not a production server yet!
  * This is only a minimal backend to get started.
  */
-import { getUuid, ImageGenRequest } from '@sd-playground/shared-types';
+import {
+  getTextForBreakdown,
+  getUuid,
+  ImageGenRequest,
+} from '@sd-playground/shared-types';
 import { exec } from 'child_process';
 import * as cors from 'cors';
 import * as express from 'express';
@@ -69,8 +73,9 @@ app.post('/api/img_gen', (req, res) => {
   const seed = imgGenReq.seed ?? Math.floor(Math.random() * 100000);
   const cfg = imgGenReq.cfg ?? 10;
   const steps = imgGenReq.steps ?? 20;
-  const prompt = imgGenReq.prompt;
+  const prompt = getTextForBreakdown(imgGenReq.promptBreakdown);
   const groupId = imgGenReq.groupId;
+  const promptBreakdown = imgGenReq.promptBreakdown;
 
   const cmd = `cd ${pathToImg} && STABILITY_KEY=${x.STABILITY_KEY} python3 -m stability_sdk.client -W 512 -H 512 -S ${seed} --cfg ${cfg} --steps ${steps} "${prompt}"`;
 
@@ -90,7 +95,7 @@ app.post('/api/img_gen', (req, res) => {
 
       await db_insertImage({
         id: getUuid(),
-        prompt,
+        promptBreakdown,
         seed,
         cfg,
         steps,
