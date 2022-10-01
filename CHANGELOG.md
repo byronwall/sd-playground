@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022-09-30 22:11:16
+
+- Add a detailed prompt editor with various controls for quickly editing the prompt
+
 ## 2022-09-29 22:13:00
 
 - Click on an image to show full size

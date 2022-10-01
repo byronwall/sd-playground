@@ -298,7 +298,6 @@ export function ImageGrid(props: ImageGridProps) {
       </Stack>
 
       <Stack>
-        {/* map tableData into table */}
         <Table>
           <thead>
             <tr>

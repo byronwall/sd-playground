@@ -10,9 +10,16 @@ import {
 import { useState } from 'react';
 
 import { api_generateImage } from '../model/api';
+import {
+  getBreakdownForText,
+  PromptBreakdown,
+  PromptEditor,
+} from './PromptEditor';
 
 export function SdNewImagePrompt() {
-  const [promptText, promptTextSet] = useState('');
+  const [promptText, promptTextSet] = useState(
+    'dump truck, poster art by Tomokazu Matsuyama, featured on pixiv, space art, 2d game art, cosmic horror, official art'
+  );
   const [cfg, cfgSet] = useState(10);
   const [steps, stepsSet] = useState(20);
 
@@ -32,15 +39,20 @@ export function SdNewImagePrompt() {
     setIsLoading(false);
   };
 
+  // store  abreakdonw in state
+  const [breakdown, setBreakdown] = useState<PromptBreakdown>(
+    getBreakdownForText(promptText)
+  );
+
   return (
     <Stack>
       <Title order={1}>test a prompt</Title>
-      <Textarea
-        label="prompt"
-        value={promptText}
-        onChange={(evt) => promptTextSet(evt.target.value)}
+      <PromptEditor
+        initialBreakdown={breakdown}
+        onBreakdownChange={setBreakdown}
         style={{ minWidth: 400 }}
       />
+
       <Group align={'flex-start'}>
         <NumberInput label="cfg" value={cfg} onChange={cfgSet} />
         <NumberInput label="steps" value={steps} onChange={stepsSet} />
