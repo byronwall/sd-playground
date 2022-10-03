@@ -1,9 +1,11 @@
-import { Card, Container, HoverCard, SimpleGrid } from '@mantine/core';
+import { Card, SimpleGrid } from '@mantine/core';
 import { SdImage } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
 
 import { ImageGrid } from './ImageGrid';
+import { ImageTransformBuilder } from './ImageTransform';
+import { ImageTransformChooser } from './ImageTransformChooser';
 import { SdImageComp } from './SdImageComp';
 
 export function getImageUrl(imageUrl: string): string {
@@ -47,6 +49,8 @@ export function ImageList() {
             </Card>
           ))}
         </SimpleGrid>
+
+        <ImageTransformBuilder />
 
         <ImageGrid groupId={focusedId} />
       </div>

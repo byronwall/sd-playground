@@ -12,8 +12,8 @@ import {
 } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQueryClient } from 'react-query';
-
 import { api_generateImage } from '../model/api';
+
 import { PromptEditor } from './PromptEditor';
 
 export function SdNewImagePrompt() {

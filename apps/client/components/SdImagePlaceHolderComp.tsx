@@ -2,7 +2,6 @@ import { Button, Loader } from '@mantine/core';
 import { SdImagePlaceHolder } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQueryClient } from 'react-query';
-
 import { api_generateImage } from '../model/api';
 
 type SdImagePlaceHolderCompProps = {

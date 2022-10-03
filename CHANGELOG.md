@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022-10-02 23:10:56
+
+- Rework the prompt modifier to use a set of transforms instead of directly editing properties
+
 ## 2022-09-30 22:11:16
 
 - Add a detailed prompt editor with various controls for quickly editing the prompt

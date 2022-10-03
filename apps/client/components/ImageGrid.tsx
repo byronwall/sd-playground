@@ -1,4 +1,3 @@
-import * as deepEqual from 'deep-equal';
 import {
   Group,
   MultiSelect,
@@ -10,17 +9,22 @@ import {
   Title,
 } from '@mantine/core';
 import {
+  generatePlaceholderForTransform,
+  generatePlaceholderForTransforms,
   getTextForBreakdown,
   PromptBreakdown,
   SdImage,
   SdImagePlaceHolder,
 } from '@sd-playground/shared-types';
+import * as deepEqual from 'deep-equal';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
 
+import { artists } from '../model/choices';
+import { ImageTransformHolder } from '../model/transformers';
+import { ImageTransformChooser } from './ImageTransformChooser';
 import { SdImageComp } from './SdImageComp';
 import { SdImagePlaceHolderComp } from './SdImagePlaceHolderComp';
-import { artists } from '../model/choices';
 
 interface ImageGridProps {
   groupId: string;
@@ -73,6 +77,13 @@ export function ImageGrid(props: ImageGridProps) {
   const mainImage: SdImage = data?.[0] ?? ({} as SdImage);
 
   console.log('mainImage', mainImage);
+
+  // store a pair of trnasform hodlers in state
+  const [transformRow, setTransformRow] =
+    useState<ImageTransformHolder>(undefined);
+
+  const [transformCol, setTransformCol] =
+    useState<ImageTransformHolder>(undefined);
 
   // take those images and push into a table -- by default 3x3 with single image in center
 
@@ -187,65 +198,56 @@ export function ImageGrid(props: ImageGridProps) {
   colHeaders.sort((a, b) => a - b);
   rowHeaders.sort((a, b) => a - b);
 
-  // iterate over the rows and cols
-  for (let row = 0; row < rowHeaders.length; row++) {
-    // create a new row
+  // generate placeholders from row/col transforms
 
-    tableData.push([]);
+  if (transformRow && transformCol) {
+    for (let row = 0; row < transformRow.transforms.length; row++) {
+      const rowTransform = transformRow.transforms[row];
+      const rowImages = [];
+      tableData.push(rowImages);
+      for (let col = 0; col < transformCol.transforms.length; col++) {
+        const colTransform = transformCol.transforms[col];
+        const placeholder = generatePlaceholderForTransforms(mainImage, [
+          rowTransform,
+          colTransform,
+        ]);
 
-    for (let col = 0; col < colHeaders.length; col++) {
-      // settings for this item
+        const found = data?.find((item) => {
+          return (
+            deepEqual(item.promptBreakdown, placeholder.promptBreakdown) &&
+            item.cfg === placeholder.cfg &&
+            item.seed === placeholder.seed &&
+            item.steps === placeholder.steps
+          );
+        });
 
-      const { url, id, ...restOfImage } = mainImage;
+        if (found) {
+          visibleIds.push(found.id);
+        }
 
-      const placeholder: SdImagePlaceHolder = {
-        ...restOfImage,
-      };
-
-      if (colVar === 'artist') {
-        placeholder.promptBreakdown = adjustArtist(
-          placeholder.promptBreakdown,
-          colHeaders[col]
-        );
-      } else {
-        placeholder[colVar] = colHeaders[col];
+        tableData[row][col] = found ?? placeholder;
       }
-
-      if (rowVar === 'artist') {
-        placeholder.promptBreakdown = adjustArtist(
-          placeholder.promptBreakdown,
-          rowHeaders[row]
-        );
-      } else {
-        placeholder[rowVar] = rowHeaders[row];
-      }
-
-      console.log('placeholder', placeholder);
-
-      // search through group to see if item exists
-
-      const found = data?.find((item) => {
-        return (
-          deepEqual(item.promptBreakdown, placeholder.promptBreakdown) &&
-          item.cfg === placeholder.cfg &&
-          item.seed === placeholder.seed &&
-          item.steps === placeholder.steps
-        );
-      });
-
-      if (found) {
-        visibleIds.push(found.id);
-      }
-
-      tableData[row][col] = found ?? placeholder;
     }
   }
+
+  console.log('tableData', tableData);
 
   const [imageSize, setImageSize] = useState(200);
 
   return (
     <div>
       <Title order={1}>grid of images</Title>
+      <Title order={2}>transform chooser</Title>
+      <Stack>
+        <ImageTransformChooser
+          holder={transformRow}
+          onChange={setTransformRow}
+        />
+        <ImageTransformChooser
+          holder={transformCol}
+          onChange={setTransformCol}
+        />
+      </Stack>
       <Group>
         <Radio.Group value={rowVar} onChange={setRowVar}>
           {variableChoices.map((choice) => (
