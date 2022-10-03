@@ -133,6 +133,9 @@ export function generatePlaceholderForTransform(
       placeholder[transform.field] += transform.delta;
       break;
     case 'text': {
+      if (placeholder.promptBreakdown === undefined) {
+        break;
+      }
       switch (transform.action) {
         case 'add': {
           const toAdd = Array.isArray(transform.value)
