@@ -1,6 +1,6 @@
 import * as cloneDeep from 'clone-deep';
+import { isEqual, orderBy } from 'lodash-es';
 import { v4 as uuidv4 } from 'uuid';
-import { isEqual, uniq, orderBy } from 'lodash-es';
 
 export function sharedTypes(): string {
   return 'shared-types';

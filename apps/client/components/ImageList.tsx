@@ -23,11 +23,15 @@ export function ImageList() {
   // store focused id in state
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
-  const imageGroups = (data ?? []).reduce<{ [id: string]: SdImage }>(
+  const imageGroups = (data ?? []).reduce<{ [id: string]: SdImage[] }>(
     (acc, cur) => {
       const key = cur.groupId;
 
-      acc[key] = cur;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+
+      acc[key].push(cur);
 
       return acc;
     },
@@ -41,13 +45,18 @@ export function ImageList() {
         {isLoading ? 'loading...' : ''}
         {isError ? 'error' : ''}
         <SimpleGrid cols={4}>
-          {(Object.values(imageGroups) ?? []).map((img) => (
-            <Card key={img.id}>
-              <div onClick={() => setFocusedId(img.groupId)}>
-                <SdImageComp image={img} size={200} disablePopover />
-              </div>
-            </Card>
-          ))}
+          {(Object.keys(imageGroups) ?? []).map((id) => {
+            const group = imageGroups[id];
+            const img = group[0];
+            return (
+              <Card key={img.id}>
+                <div onClick={() => setFocusedId(img.groupId)}>
+                  <SdImageComp image={img} size={200} disablePopover />
+                  <p>total items = {group.length}</p>
+                </div>
+              </Card>
+            );
+          })}
         </SimpleGrid>
 
         <ImageTransformBuilder />
