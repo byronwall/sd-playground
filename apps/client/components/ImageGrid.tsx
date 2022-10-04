@@ -1,7 +1,12 @@
+import { isEqual } from 'lodash-es';
 import {
+  Button,
+  CopyButton,
   Group,
+  JsonInput,
   MultiSelect,
   NumberInput,
+  Popover,
   Radio,
   Stack,
   Switch,
@@ -9,14 +14,15 @@ import {
   Title,
 } from '@mantine/core';
 import {
-  generatePlaceholderForTransform,
+  findImageDifferences,
   generatePlaceholderForTransforms,
   getTextForBreakdown,
   PromptBreakdown,
   SdImage,
   SdImagePlaceHolder,
+  summarizeAllDifferences,
 } from '@sd-playground/shared-types';
-import * as deepEqual from 'deep-equal';
+
 import { useState } from 'react';
 import { useQuery } from 'react-query';
 
@@ -214,7 +220,7 @@ export function ImageGrid(props: ImageGridProps) {
 
         const found = data?.find((item) => {
           return (
-            deepEqual(item.promptBreakdown, placeholder.promptBreakdown) &&
+            isEqual(item.promptBreakdown, placeholder.promptBreakdown) &&
             item.cfg === placeholder.cfg &&
             item.seed === placeholder.seed &&
             item.steps === placeholder.steps
@@ -407,10 +413,17 @@ export function ImageGrid(props: ImageGridProps) {
               <th>seed</th>
               <th>steps</th>
               <th>visible</th>
+              <th />
+              <th />
             </tr>
           </thead>
           <tbody>
             {data?.map((item) => {
+              const imgJson = JSON.stringify(item, null, 2);
+              const baseDelta = findImageDifferences(mainImage, item, {
+                shouldReportAddRemove: false,
+              });
+              const baseDeltaJson = JSON.stringify(baseDelta, null, 2);
               return (
                 <tr key={item.id}>
                   <td>
@@ -425,11 +438,72 @@ export function ImageGrid(props: ImageGridProps) {
                       ? 'true'
                       : ''}
                   </td>
+                  <td>
+                    <Popover closeOnClickOutside>
+                      <Popover.Dropdown>
+                        <div style={{ width: 600 }}>
+                          <b>JSON for image</b>
+                          <CopyButton value={imgJson}>
+                            {({ copied, copy }) => (
+                              <Button
+                                color={copied ? 'teal' : 'blue'}
+                                onClick={copy}
+                              >
+                                {copied ? 'Copied url' : 'Copy url'}
+                              </Button>
+                            )}
+                          </CopyButton>
+                          <JsonInput value={imgJson} minRows={10} />
+                        </div>
+                      </Popover.Dropdown>
+                      <Popover.Target>
+                        <Button>JSON</Button>
+                      </Popover.Target>
+                    </Popover>
+                  </td>
+                  <td>
+                    <Popover closeOnClickOutside>
+                      <Popover.Dropdown>
+                        <div style={{ width: 600 }}>
+                          <b>JSON for image</b>
+                          <CopyButton value={baseDeltaJson}>
+                            {({ copied, copy }) => (
+                              <Button
+                                color={copied ? 'teal' : 'blue'}
+                                onClick={copy}
+                              >
+                                {copied ? 'Copied url' : 'Copy url'}
+                              </Button>
+                            )}
+                          </CopyButton>
+                          <JsonInput
+                            value={baseDeltaJson}
+                            size="xl"
+                            minRows={10}
+                          />
+                        </div>
+                      </Popover.Dropdown>
+                      <Popover.Target>
+                        <Button>deltas</Button>
+                      </Popover.Target>
+                    </Popover>
+                    <div>
+                      {baseDelta.map((delta, idx) => (
+                        <div key={idx}>{JSON.stringify(delta)}</div>
+                      ))}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </Table>
+        <div>
+          <Title order={4}>all differences</Title>
+          <pre>
+            {JSON.stringify(summarizeAllDifferences(mainImage, data), null, 2)}
+          </pre>
+        </div>
       </Stack>
     </div>
   );

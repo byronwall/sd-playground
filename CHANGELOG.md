@@ -1,8 +1,15 @@
 # Changelog
 
+## 2022-10-03 21:07:49
+
+- Add ability to detect differences between images and groups of images
+- Display those values in table -- will be used to drive the new grid interface
+
 ## 2022-10-02 23:10:56
 
 - Rework the prompt modifier to use a set of transforms instead of directly editing properties
+
+Next steps: allow for an existing prompt to be the basis of transforms; build an interface to show progressive updates to a prompt, improve logic on add prompt text and sync with labels, show those labels
 
 ## 2022-09-30 22:11:16
 

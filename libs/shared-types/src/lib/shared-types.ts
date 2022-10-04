@@ -1,5 +1,6 @@
-import { v4 as uuidv4 } from 'uuid';
 import * as cloneDeep from 'clone-deep';
+import { v4 as uuidv4 } from 'uuid';
+import { isEqual, uniq } from 'lodash-es';
 
 export function sharedTypes(): string {
   return 'shared-types';
@@ -178,4 +179,116 @@ export function generatePlaceholderForTransform(
     }
   }
   return placeholder;
+}
+
+export function findImageDifferences(
+  base: SdImage,
+  comp: SdImage,
+  { shouldReportAddRemove = true } = {}
+): SdImageTransform[] {
+  const results: SdImageTransform[] = [];
+
+  // find the differences between the base and the comp
+
+  const numRawChecks = ['seed', 'cfg', 'steps'] as const;
+
+  for (const numRawCheck of numRawChecks) {
+    if (base[numRawCheck] !== comp[numRawCheck]) {
+      results.push({
+        type: 'num-raw',
+        field: numRawCheck,
+        value: comp[numRawCheck],
+      });
+    }
+  }
+
+  // find the differences in the prompt breakdown
+  for (const breakdownType of PromptBreakdownSortOrder) {
+    const baseParts = base.promptBreakdown.parts.filter(
+      (c) => c.label === breakdownType
+    );
+    const compParts = comp.promptBreakdown.parts.filter(
+      (c) => c.label === breakdownType
+    );
+
+    if (shouldReportAddRemove) {
+      const baseText = baseParts.map((c) => c.text);
+      const compText = compParts.map((c) => c.text);
+
+      const added = compText.filter((c) => !baseText.includes(c));
+      const removed = baseText.filter((c) => !compText.includes(c));
+
+      if (added.length > 0) {
+        results.push({
+          type: 'text',
+          field: breakdownType,
+          action: 'add',
+          value: added,
+        });
+      }
+
+      if (removed.length > 0) {
+        results.push({
+          type: 'text',
+          field: breakdownType,
+          action: 'remove',
+          value: removed,
+        });
+      }
+    } else {
+      if (!isEqual(baseParts, compParts)) {
+        results.push({
+          type: 'text',
+          field: breakdownType,
+          action: 'set',
+          value: compParts.map((c) => c.text),
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+export function summarizeAllDifferences(base: SdImage, allImages: SdImage[]) {
+  const results: SdImageTransform[] = [];
+
+  if (base === undefined || allImages === undefined || allImages.length === 0) {
+    return results;
+  }
+
+  for (const image of allImages) {
+    const diffs = findImageDifferences(base, image, {
+      shouldReportAddRemove: false,
+    });
+    results.push(...diffs);
+  }
+
+  // take all of those and build a unique summary
+
+  const summary = results.reduce((acc, cur) => {
+    if (cur.type === 'num-delta') {
+      // skip deltas -- they won't appear
+      return acc;
+    }
+
+    if (acc[cur.field] === undefined) {
+      acc[cur.field] = [];
+    }
+
+    if (Array.isArray(cur.value)) {
+      acc[cur.field].push(...cur.value);
+    } else {
+      acc[cur.field].push(cur.value);
+    }
+
+    return acc;
+  }, {});
+
+  // force those values to be unique
+  for (const key of Object.keys(summary)) {
+    summary[key] = uniq(summary[key]);
+  }
+
+  return summary;
 }
