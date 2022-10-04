@@ -1,4 +1,3 @@
-import { isEqual } from 'lodash-es';
 import {
   Button,
   CopyButton,
@@ -9,7 +8,6 @@ import {
   Popover,
   Radio,
   Stack,
-  Switch,
   Table,
   Title,
 } from '@mantine/core';
@@ -17,18 +15,23 @@ import {
   findImageDifferences,
   generatePlaceholderForTransforms,
   getTextForBreakdown,
-  PromptBreakdown,
+  isImageSameAsPlaceHolder,
+  PromptBreakdownSortOrder,
   SdImage,
   SdImagePlaceHolder,
+  SdImageTransform,
+  SdImageTransformNumberRaw,
+  SdImageTransformText,
   summarizeAllDifferences,
 } from '@sd-playground/shared-types';
-
+import { uniq } from 'lodash-es';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
 
 import { artists } from '../model/choices';
 import { ImageTransformHolder } from '../model/transformers';
 import { ImageTransformChooser } from './ImageTransformChooser';
+import { Switch } from './MantineWrappers';
 import { SdImageComp } from './SdImageComp';
 import { SdImagePlaceHolderComp } from './SdImagePlaceHolderComp';
 
@@ -68,11 +71,18 @@ const artistChoices = artists.map((c) => ({ value: 'by ' + c, label: c }));
 const variableChoices = ['cfg', 'seed', 'steps', 'artist'];
 
 export function ImageGrid(props: ImageGridProps) {
+  console.log('ImageGrid - render');
+
   // des props
   const { groupId } = props;
 
   // create a query for 1 id
-  const { data, isLoading, isError, error } = useQuery(groupId, async () => {
+  const {
+    data: _data,
+    isLoading,
+    isError,
+    error,
+  } = useQuery(groupId, async () => {
     const res = await fetch(
       `http://localhost:3333/api/images/group/${props.groupId}`
     );
@@ -80,11 +90,12 @@ export function ImageGrid(props: ImageGridProps) {
     return results;
   });
 
+  const data = _data ?? [];
+
   const mainImage: SdImage = data?.[0] ?? ({} as SdImage);
 
   console.log('mainImage', mainImage);
 
-  // store a pair of trnasform hodlers in state
   const [transformRow, setTransformRow] =
     useState<ImageTransformHolder>(undefined);
 
@@ -96,24 +107,11 @@ export function ImageGrid(props: ImageGridProps) {
   // this is an array of arrays
   // this will eventually by built by checking the CFG or prompt or other details
 
-  const [rowCount, setRowCount] = useState(3);
-  const [colCount, setColCount] = useState(3);
-
-  const [showAllCfgs, setShowAllCfgs] = useState(true);
-  const [showAllSeeds, setShowAllSeeds] = useState(true);
-  const [showAllSteps, setShowAllSteps] = useState(true);
-  const [showAllArtists, setShowAllArtists] = useState(true);
-
-  const tableData: Array<Array<SdImage | SdImagePlaceHolder>> = [];
+  const [isFromXForm, setIsFromXForm] = useState<boolean>(false);
 
   // store row and colVar in state
   const [rowVar, setRowVar] = useState('cfg');
   const [colVar, setColVar] = useState('seed');
-
-  // store cfg delta size in state
-  const [cfgDelta, setCfgDelta] = useState(2);
-  const [seedDelta, setSeedDelta] = useState(10);
-  const [stepsDelta, setStepsDelta] = useState(10);
 
   // store some cfg and step choices in state also
   const [cfgChoice, setCfgChoice] = useState<string[]>([]);
@@ -121,66 +119,15 @@ export function ImageGrid(props: ImageGridProps) {
   const [seedChoice, setSeedChoice] = useState<string[]>([]);
   const [artistChoice, setArtistChoice] = useState<string[]>([]);
 
-  // track bools to enable the auto gen for row/col
-  const [autoGenRow, setAutoGenRow] = useState(false);
-  const [autoGenCol, setAutoGenCol] = useState(false);
-
-  const delta: { [E in keyof SdImagePlaceHolder]: number | undefined } = {
-    cfg: cfgDelta,
-    seed: seedDelta,
-    steps: stepsDelta,
-    promptBreakdown: undefined,
-    groupId: undefined,
-  };
-
-  const middleRow = Math.floor(rowCount / 2);
-  const middleCol = Math.floor(colCount / 2);
-
   const visibleIds: string[] = [];
 
-  const showAllMap = {
-    seed: showAllSeeds,
-    cfg: showAllCfgs,
-    steps: showAllSteps,
-    artist: showAllArtists,
-  };
-  // map grid types to col var
-  const colShowAll = showAllMap[colVar];
-  const rowShowAll = showAllMap[rowVar];
+  const diffSummary = summarizeAllDifferences(mainImage, data);
 
   // build the col headers
-  let colHeaders = [];
-  if (colShowAll) {
-    colHeaders = uniq(
-      data?.map((d) =>
-        colVar === 'artist' ? getArtist(d.promptBreakdown) : d[colVar]
-      )
-    );
-  } else if (autoGenCol) {
-    // build list from the col count
-    for (let col = 0; col < colCount; col++) {
-      colHeaders.push(
-        +mainImage[colVar] + (col - middleCol) * (delta[colVar] ?? 0)
-      );
-    }
-  }
+  let colHeaders = diffSummary[colVar] ?? [mainImage[colVar]];
 
   // build the row headers
-  let rowHeaders = [];
-  if (rowShowAll) {
-    rowHeaders = uniq(
-      data?.map((d) =>
-        rowVar === 'artist' ? getArtist(d.promptBreakdown) : d[rowVar]
-      )
-    );
-  } else if (autoGenRow) {
-    // build list from the row count
-    for (let row = 0; row < rowCount; row++) {
-      rowHeaders.push(
-        +mainImage[rowVar] + (row - middleRow) * (delta[rowVar] ?? 0)
-      );
-    }
-  }
+  let rowHeaders = diffSummary[rowVar] ?? [mainImage[rowVar]];
 
   // add in the must show items from drop down
   const extraChoiceMap = {
@@ -206,37 +153,23 @@ export function ImageGrid(props: ImageGridProps) {
 
   // generate placeholders from row/col transforms
 
-  if (transformRow && transformCol) {
-    for (let row = 0; row < transformRow.transforms.length; row++) {
-      const rowTransform = transformRow.transforms[row];
-      const rowImages = [];
-      tableData.push(rowImages);
-      for (let col = 0; col < transformCol.transforms.length; col++) {
-        const colTransform = transformCol.transforms[col];
-        const placeholder = generatePlaceholderForTransforms(mainImage, [
-          rowTransform,
-          colTransform,
-        ]);
-
-        const found = data?.find((item) => {
-          return (
-            isEqual(item.promptBreakdown, placeholder.promptBreakdown) &&
-            item.cfg === placeholder.cfg &&
-            item.seed === placeholder.seed &&
-            item.steps === placeholder.steps
-          );
-        });
-
-        if (found) {
-          visibleIds.push(found.id);
-        }
-
-        tableData[row][col] = found ?? placeholder;
-      }
-    }
-  }
-
-  console.log('tableData', tableData);
+  const tableData = isFromXForm
+    ? generateTableFromXform(
+        transformRow,
+        transformCol,
+        mainImage,
+        data,
+        visibleIds
+      )
+    : generateTableDataFromChoices(
+        rowHeaders,
+        rowVar,
+        colHeaders,
+        colVar,
+        mainImage,
+        data,
+        visibleIds
+      );
 
   const [imageSize, setImageSize] = useState(200);
 
@@ -254,73 +187,38 @@ export function ImageGrid(props: ImageGridProps) {
           onChange={setTransformCol}
         />
       </Stack>
-      <Group>
-        <Radio.Group value={rowVar} onChange={setRowVar}>
-          {variableChoices.map((choice) => (
-            <Radio key={choice} value={choice} label={choice} />
-          ))}
-        </Radio.Group>
-        {/* repeat for col var */}
-        <Radio.Group value={colVar} onChange={setColVar}>
-          {variableChoices.map((choice) => (
-            <Radio key={choice} value={choice} label={choice} />
-          ))}
-        </Radio.Group>
-      </Group>
+      <Switch
+        checked={isFromXForm}
+        onChange={setIsFromXForm}
+        label="should build grid from xform"
+      />
+      <Stack>
+        <Group>
+          <b>row var</b>
+          <Radio.Group value={rowVar} onChange={setRowVar}>
+            {variableChoices.map((choice) => (
+              <Radio key={choice} value={choice} label={choice} />
+            ))}
+          </Radio.Group>
+        </Group>
+        <Group>
+          <b>col var</b>
+          <Radio.Group value={colVar} onChange={setColVar}>
+            {variableChoices.map((choice) => (
+              <Radio key={choice} value={choice} label={choice} />
+            ))}
+          </Radio.Group>
+        </Group>
+      </Stack>
       <div> {isLoading ? 'loading...' : ''} </div>
       <div> {isError ? 'error' : ''} </div>
       <Stack>
         <Group>
           <NumberInput label="size" value={imageSize} onChange={setImageSize} />
         </Group>
-        <Group>
-          <NumberInput label="rows" value={rowCount} onChange={setRowCount} />
-          <Switch
-            label="auto row"
-            checked={autoGenRow}
-            onChange={(evt) => setAutoGenRow(evt.currentTarget.checked)}
-          />
-          <NumberInput label="cols" value={colCount} onChange={setColCount} />
-          <Switch
-            label="auto col"
-            checked={autoGenCol}
-            onChange={(evt) => setAutoGenCol(evt.currentTarget.checked)}
-          />
-        </Group>
-        <Group title="deltas">
-          <NumberInput label="d-cfg" value={cfgDelta} onChange={setCfgDelta} />
-          <NumberInput
-            label="d-seed"
-            value={seedDelta}
-            onChange={setSeedDelta}
-          />
-          <NumberInput
-            label="d-steps"
-            value={stepsDelta}
-            onChange={setStepsDelta}
-          />
-        </Group>
-        <Group>
-          {/* build switches for teh show alls */}
-          <Switch
-            label="show all cfg"
-            checked={showAllCfgs}
-            onChange={(evt) => setShowAllCfgs(evt.currentTarget.checked)}
-          />
 
-          <Switch
-            label="show all seed"
-            checked={showAllSeeds}
-            onChange={(evt) => setShowAllSeeds(evt.currentTarget.checked)}
-          />
-
-          <Switch
-            label="show all steps"
-            checked={showAllSteps}
-            onChange={(evt) => setShowAllSteps(evt.currentTarget.checked)}
-          />
-        </Group>
         <Group>
+          <b>extra choices</b>
           <MultiSelect
             label="cfg"
             data={cfgChoices}
@@ -356,48 +254,54 @@ export function ImageGrid(props: ImageGridProps) {
             searchable
           />
         </Group>
-      </Stack>
 
-      <Stack>
         <Table>
           <thead>
             <tr>
               <th />
               {colHeaders.map((col) => (
-                <th key={col}>{col}</th>
+                <th key={col}>{Array.isArray(col) ? col.join(' + ') : col}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {tableData.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                <td>{rowHeaders[rowIndex]}</td>
-                {row.map((cell, colIndex) => {
-                  if (cell === undefined) {
+            {tableData.map((row, rowIndex) => {
+              const rowHeader = rowHeaders[rowIndex];
+              return (
+                <tr key={rowIndex}>
+                  <td>
+                    {Array.isArray(rowHeader)
+                      ? rowHeader.join(' + ')
+                      : rowHeader}
+                  </td>
+
+                  {row.map((cell, colIndex) => {
+                    if (cell === undefined) {
+                      return (
+                        <td key={colIndex}>
+                          <div />
+                        </td>
+                      );
+                    }
+                    if (!('id' in cell)) {
+                      return (
+                        <td key={colIndex}>
+                          <SdImagePlaceHolderComp
+                            size={imageSize}
+                            placeholder={cell}
+                          />
+                        </td>
+                      );
+                    }
                     return (
-                      <td key={colIndex}>
-                        <div />
+                      <td key={cell?.id ?? colIndex}>
+                        <SdImageComp image={cell} size={imageSize} />
                       </td>
                     );
-                  }
-                  if (!('id' in cell)) {
-                    return (
-                      <td key={colIndex}>
-                        <SdImagePlaceHolderComp
-                          size={imageSize}
-                          placeholder={cell}
-                        />
-                      </td>
-                    );
-                  }
-                  return (
-                    <td key={cell?.id ?? colIndex}>
-                      <SdImageComp image={cell} size={imageSize} />
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </Table>
       </Stack>
@@ -500,45 +404,108 @@ export function ImageGrid(props: ImageGridProps) {
         </Table>
         <div>
           <Title order={4}>all differences</Title>
-          <pre>
-            {JSON.stringify(summarizeAllDifferences(mainImage, data), null, 2)}
-          </pre>
+          <pre>{JSON.stringify(diffSummary, null, 2)}</pre>
         </div>
       </Stack>
     </div>
   );
 }
 
-function uniq(arr: any[]) {
-  return [...new Set(arr)];
+function generateTableDataFromChoices(
+  rowHeaders: any,
+  rowVar: string,
+  colHeaders: any,
+  colVar: string,
+  mainImage: SdImage,
+  data: SdImage[],
+  visibleIds: string[]
+): SdImageGrid {
+  const tableDataChoices = [];
+  rowHeaders.map((rowHeader, row) => {
+    tableDataChoices.push([]);
+
+    const rowTransformTemp = generateTransformFromSimplerHeader(
+      rowVar,
+      rowHeader
+    );
+
+    colHeaders.map((colHeader, col) => {
+      const colTransformTemp = generateTransformFromSimplerHeader(
+        colVar,
+        colHeader
+      );
+
+      const placeholder = generatePlaceholderForTransforms(mainImage, [
+        rowTransformTemp,
+        colTransformTemp,
+      ]);
+
+      const found = data.find((img) =>
+        isImageSameAsPlaceHolder(img, placeholder)
+      );
+
+      if (found) {
+        visibleIds.push(found.id);
+      }
+
+      tableDataChoices[row][col] = found ?? placeholder;
+    });
+  });
+  return tableDataChoices;
 }
 
-function adjustArtist(
-  breakdown: PromptBreakdown,
-  newArtist: string
-): PromptBreakdown {
-  // return orignal if arist is present
-  const wasFound = breakdown.parts.find(
-    (c) => c.label === 'artist' && c.text === newArtist
-  );
-
-  if (wasFound) {
-    return breakdown;
+function generateTransformFromSimplerHeader(rowVar: string, rowHeader: any) {
+  let rowTransformTemp: SdImageTransform;
+  if (PromptBreakdownSortOrder.includes(rowVar as any)) {
+    rowTransformTemp = {
+      type: 'text',
+      action: 'set',
+      field: rowVar,
+      value: rowHeader,
+    } as SdImageTransformText;
+  } else {
+    rowTransformTemp = {
+      type: 'num-raw',
+      field: rowVar as any,
+      value: rowHeader,
+    } as SdImageTransformNumberRaw;
   }
-  const newBreakdown = { ...breakdown };
-
-  // remove all artists -- and then add the new one
-  const newParts = newBreakdown.parts.filter((c) => c.label !== 'artist');
-  newParts.push({ label: 'artist', text: newArtist });
-
-  newBreakdown.parts = newParts;
-  return newBreakdown;
+  return rowTransformTemp;
 }
 
-function getArtist(breakdown: PromptBreakdown): string {
-  const artistPart = breakdown.parts.find((c) => c.label === 'artist');
-  if (artistPart === undefined) {
-    return '';
+type SdImageGrid = Array<Array<SdImage | SdImagePlaceHolder>>;
+
+function generateTableFromXform(
+  transformRow: ImageTransformHolder,
+  transformCol: ImageTransformHolder,
+  mainImage: SdImage,
+  data: SdImage[],
+  visibleIds: string[]
+): SdImageGrid {
+  const tableData: Array<Array<SdImage | SdImagePlaceHolder>> = [];
+  if (transformRow && transformCol) {
+    for (let row = 0; row < transformRow.transforms.length; row++) {
+      const rowTransform = transformRow.transforms[row];
+      const rowImages = [];
+      tableData.push(rowImages);
+      for (let col = 0; col < transformCol.transforms.length; col++) {
+        const colTransform = transformCol.transforms[col];
+        const placeholder = generatePlaceholderForTransforms(mainImage, [
+          rowTransform,
+          colTransform,
+        ]);
+
+        const found = data?.find((item) =>
+          isImageSameAsPlaceHolder(item, placeholder)
+        );
+
+        if (found) {
+          visibleIds.push(found.id);
+        }
+
+        tableData[row][col] = found ?? placeholder;
+      }
+    }
   }
-  return artistPart.text;
+  return tableData;
 }

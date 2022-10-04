@@ -1,6 +1,6 @@
 import * as cloneDeep from 'clone-deep';
 import { v4 as uuidv4 } from 'uuid';
-import { isEqual, uniq } from 'lodash-es';
+import { isEqual, uniq, orderBy } from 'lodash-es';
 
 export function sharedTypes(): string {
   return 'shared-types';
@@ -276,19 +276,62 @@ export function summarizeAllDifferences(base: SdImage, allImages: SdImage[]) {
       acc[cur.field] = [];
     }
 
-    if (Array.isArray(cur.value)) {
-      acc[cur.field].push(...cur.value);
-    } else {
-      acc[cur.field].push(cur.value);
-    }
+    acc[cur.field].push(cur.value);
 
     return acc;
   }, {});
 
   // force those values to be unique
   for (const key of Object.keys(summary)) {
-    summary[key] = uniq(summary[key]);
+    const keep = [];
+    const keepObj = [];
+    for (const value of summary[key]) {
+      const checkVal = JSON.stringify(value);
+      if (!keep.includes(checkVal)) {
+        keep.push(checkVal);
+        keepObj.push(value);
+      }
+    }
+
+    summary[key] = keepObj;
+  }
+
+  // for the fields that changed -- add the base values in too
+  for (const key of Object.keys(summary)) {
+    if (PromptBreakdownSortOrder.includes(key as any)) {
+      // add in the baseline value
+      summary[key].unshift(
+        base.promptBreakdown.parts
+          .filter((c) => c.label === key)
+          .map((c) => c.text)
+      );
+      continue;
+    }
+    const baseVal = base[key];
+    if (baseVal === null || baseVal === undefined) {
+      continue;
+    }
+    summary[key].unshift(baseVal);
   }
 
   return summary;
+}
+
+export function isImageSameAsPlaceHolder(
+  item: SdImage,
+  placeholder: SdImagePlaceHolder
+): unknown {
+  const sortedItem = sortPromptBreakdown(item);
+  const sortedPlaceholder = sortPromptBreakdown(placeholder);
+  const promptSame = isEqual(sortedItem, sortedPlaceholder);
+
+  return (
+    promptSame &&
+    item.cfg === placeholder.cfg &&
+    item.seed === placeholder.seed &&
+    item.steps === placeholder.steps
+  );
+}
+function sortPromptBreakdown(item: SdImage | SdImagePlaceHolder) {
+  return orderBy(item.promptBreakdown.parts, (c) => c.label + c.text);
 }

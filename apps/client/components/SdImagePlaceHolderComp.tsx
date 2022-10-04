@@ -1,8 +1,9 @@
-import { Button, Loader } from '@mantine/core';
+import { Button, Loader, Popover } from '@mantine/core';
 import { SdImagePlaceHolder } from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQueryClient } from 'react-query';
 import { api_generateImage } from '../model/api';
+import { JsonButton } from './MantineWrappers';
 
 type SdImagePlaceHolderCompProps = {
   size: number;
@@ -38,7 +39,12 @@ export function SdImagePlaceHolderComp(props: SdImagePlaceHolderCompProps) {
       <p>cfg = {placeholder.cfg}</p>
       <p>steps = {placeholder.steps}</p>
 
-      {isLoading ? <Loader /> : <Button onClick={handleClick}>gen</Button>}
+      {isLoading && <Loader />}
+      {!isLoading && (
+        <div>
+          <Button onClick={handleClick}>gen</Button>
+        </div>
+      )}
     </div>
   );
 }

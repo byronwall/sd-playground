@@ -1,4 +1,9 @@
-import { SwitchProps as mSwitchProps, Switch as MSwitch } from '@mantine/core';
+import {
+  SwitchProps as mSwitchProps,
+  Switch as MSwitch,
+  Popover,
+  Button,
+} from '@mantine/core';
 import { useCallback } from 'react';
 
 type SwitchProps = Omit<mSwitchProps, 'onChange'> & {
@@ -14,4 +19,20 @@ export function Switch(props: SwitchProps) {
   );
 
   return <MSwitch {...rest} onChange={handleChange} />;
+}
+
+export function JsonButton(props: { obj: any }) {
+  const { obj } = props;
+  return (
+    <Popover>
+      <Popover.Target>
+        <Button>JSON</Button>
+      </Popover.Target>
+      <Popover.Dropdown>
+        <div>
+          <pre>{JSON.stringify(obj, null, 2)}</pre>
+        </div>
+      </Popover.Dropdown>
+    </Popover>
+  );
 }
