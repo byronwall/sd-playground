@@ -12,21 +12,23 @@ import {
   Title,
 } from '@mantine/core';
 import {
-  findImageDifferences,
-  generatePlaceholderForTransforms,
   getTextForBreakdown,
-  isImageSameAsPlaceHolder,
   PromptBreakdownSortOrder,
   SdImage,
   SdImagePlaceHolder,
   SdImageTransform,
   SdImageTransformNumberRaw,
   SdImageTransformText,
-  summarizeAllDifferences,
 } from '@sd-playground/shared-types';
 import { uniq } from 'lodash-es';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
+import {
+  summarizeAllDifferences,
+  findImageDifferences,
+  generatePlaceholderForTransforms,
+  isImageSameAsPlaceHolder,
+} from '../libs/helpers';
 
 import { artists } from '../model/choices';
 import { ImageTransformHolder } from '../model/transformers';

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022-10-04 20:59:52
+
+- Rework common libs to avoid importing lodash on the server
+
 ## 2022-10-03 21:07:49
 
 - Add ability to detect differences between images and groups of images
