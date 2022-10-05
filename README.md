@@ -31,6 +31,10 @@ Current support is for the `cfg`, `steps`, and `seed` parameters. The end goal i
 
 ![](docs/vary-artist.png)
 
+### Table of varying the prompt from more to less complex
+
+![](docs/vary-prompt.png)
+
 ### Controls for grid display
 
 ![](docs/grid-controls.png)
