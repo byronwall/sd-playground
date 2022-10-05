@@ -3,6 +3,8 @@
 ## 2022-10-04 20:59:52
 
 - Rework common libs to avoid importing lodash on the server
+- Rework the transform system to change how the grid displays
+- Allow a prompt to be quickly edited to produce transforms
 
 ## 2022-10-03 21:07:49
 
