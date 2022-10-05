@@ -16,19 +16,19 @@ import { api_generateImage } from '../model/api';
 
 import { PromptEditor } from './PromptEditor';
 
+const starterPrompt =
+  'dump truck, poster art by Tomokazu Matsuyama, featured on pixiv, space art, 2d game art, cosmic horror, official art';
+
 export function SdNewImagePrompt() {
-  const [promptText, promptTextSet] = useState(
-    'dump truck, poster art by Tomokazu Matsuyama, featured on pixiv, space art, 2d game art, cosmic horror, official art'
-  );
   const [cfg, cfgSet] = useState(10);
   const [steps, stepsSet] = useState(20);
 
-  const [seed, seedSet] = useState(0);
+  const [seed, seedSet] = useState(Math.floor(Math.random() * 67823));
 
   const [isLoading, setIsLoading] = useState(false);
 
   const [breakdown, setBreakdown] = useState<PromptBreakdown>(
-    getBreakdownForText(promptText)
+    getBreakdownForText(starterPrompt)
   );
 
   const queryClient = useQueryClient();

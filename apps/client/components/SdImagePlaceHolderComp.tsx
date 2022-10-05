@@ -1,5 +1,8 @@
 import { Button, Loader, Popover } from '@mantine/core';
-import { SdImagePlaceHolder } from '@sd-playground/shared-types';
+import {
+  getTextForBreakdown,
+  SdImagePlaceHolder,
+} from '@sd-playground/shared-types';
 import { useState } from 'react';
 import { useQueryClient } from 'react-query';
 import { api_generateImage } from '../model/api';
@@ -38,6 +41,7 @@ export function SdImagePlaceHolderComp(props: SdImagePlaceHolderCompProps) {
       <p>seed = {placeholder.seed} </p>
       <p>cfg = {placeholder.cfg}</p>
       <p>steps = {placeholder.steps}</p>
+      <p>prompt = {getTextForBreakdown(placeholder.promptBreakdown)}</p>
 
       {isLoading && <Loader />}
       {!isLoading && (

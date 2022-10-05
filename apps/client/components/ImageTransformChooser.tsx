@@ -6,11 +6,12 @@ import { ImageTransformHolder } from '../model/transformers';
 interface ImageTransformChooserProps {
   holder: ImageTransformHolder | undefined;
   onChange: (holder: ImageTransformHolder) => void;
+  disabled?: boolean;
 }
 
 export function ImageTransformChooser(props: ImageTransformChooserProps) {
   // des props
-  const { holder, onChange } = props;
+  const { holder, onChange, disabled } = props;
 
   const defaultTransformers = useAppStore((s) => s.transformHolders);
 
@@ -29,6 +30,7 @@ export function ImageTransformChooser(props: ImageTransformChooserProps) {
       data={selectData}
       onChange={handleChange}
       searchable
+      disabled={disabled}
     />
   );
 }

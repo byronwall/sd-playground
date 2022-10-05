@@ -1,39 +1,36 @@
 import {
-  Button,
-  CopyButton,
   Group,
-  JsonInput,
   MultiSelect,
   NumberInput,
-  Popover,
   Radio,
   Stack,
   Table,
   Title,
 } from '@mantine/core';
+import { useListState } from '@mantine/hooks';
 import {
-  getTextForBreakdown,
   PromptBreakdownSortOrder,
   SdImage,
   SdImagePlaceHolder,
   SdImageTransform,
   SdImageTransformNumberRaw,
   SdImageTransformText,
+  TransformNone,
 } from '@sd-playground/shared-types';
+import produce from 'immer';
 import { uniq } from 'lodash-es';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
+
 import {
-  summarizeAllDifferences,
-  findImageDifferences,
   generatePlaceholderForTransforms,
   isImageSameAsPlaceHolder,
+  summarizeAllDifferences,
 } from '../libs/helpers';
-
 import { artists } from '../model/choices';
 import { ImageTransformHolder } from '../model/transformers';
 import { ImageTransformChooser } from './ImageTransformChooser';
-import { Switch } from './MantineWrappers';
+import { SdGroupTable } from './SdGroupTable';
 import { SdImageComp } from './SdImageComp';
 import { SdImagePlaceHolderComp } from './SdImagePlaceHolderComp';
 
@@ -70,7 +67,7 @@ const seedChoices = [
 
 const artistChoices = artists.map((c) => ({ value: 'by ' + c, label: c }));
 
-const variableChoices = ['cfg', 'seed', 'steps', 'artist'];
+const variableChoices = ['cfg', 'seed', 'steps', 'artist', 'loose', 'known'];
 
 export function ImageGrid(props: ImageGridProps) {
   console.log('ImageGrid - render');
@@ -109,8 +106,6 @@ export function ImageGrid(props: ImageGridProps) {
   // this is an array of arrays
   // this will eventually by built by checking the CFG or prompt or other details
 
-  const [isFromXForm, setIsFromXForm] = useState<boolean>(false);
-
   // store row and colVar in state
   const [rowVar, setRowVar] = useState('cfg');
   const [colVar, setColVar] = useState('seed');
@@ -123,77 +118,119 @@ export function ImageGrid(props: ImageGridProps) {
 
   const visibleIds: string[] = [];
 
-  const diffSummary = summarizeAllDifferences(mainImage, data);
-
-  // build the col headers
-  let colHeaders = diffSummary[colVar] ?? [mainImage[colVar]];
-
-  // build the row headers
-  let rowHeaders = diffSummary[rowVar] ?? [mainImage[rowVar]];
-
   // add in the must show items from drop down
   const extraChoiceMap = {
     seed: seedChoice,
     cfg: cfgChoice,
     steps: stepsChoice,
     artist: artistChoice,
+    known: [],
   };
 
-  extraChoiceMap[colVar].forEach((c) =>
-    colHeaders.push(colVar === 'artist' ? c : +c)
-  );
-  extraChoiceMap[rowVar].forEach((c) =>
-    rowHeaders.push(rowVar === 'artist' ? c : +c)
-  );
+  const diffSummary = summarizeAllDifferences(mainImage, data);
 
-  // make sure they are unique
-  colHeaders = uniq(colHeaders);
-  rowHeaders = uniq(rowHeaders);
+  const [looseTransforms, setLooseTransforms] = useState<ImageTransformHolder>({
+    name: 'loose',
+    transforms: [TransformNone],
+  });
 
-  colHeaders.sort((a, b) => a - b);
-  rowHeaders.sort((a, b) => a - b);
+  let rowTransformHolder: ImageTransformHolder;
+  let colTransformHolder: ImageTransformHolder;
 
-  // generate placeholders from row/col transforms
-
-  const tableData = isFromXForm
-    ? generateTableFromXform(
-        transformRow,
-        transformCol,
-        mainImage,
-        data,
-        visibleIds
-      )
-    : generateTableDataFromChoices(
-        rowHeaders,
-        rowVar,
-        colHeaders,
-        colVar,
-        mainImage,
-        data,
-        visibleIds
+  switch (rowVar) {
+    case 'cfg':
+    case 'step':
+    case 'artist':
+    case 'seed': {
+      // build the row headers
+      let rowHeaders = diffSummary[rowVar] ?? [mainImage[rowVar]];
+      extraChoiceMap[rowVar].forEach((c) =>
+        rowHeaders.push(rowVar === 'artist' ? c : +c)
       );
 
+      rowHeaders = uniq(rowHeaders);
+      rowHeaders.sort((a, b) => a - b);
+
+      rowTransformHolder = generateSimpleTransformHolder(
+        'row simple',
+        rowHeaders,
+        rowVar
+      );
+
+      break;
+    }
+    case 'loose':
+      rowTransformHolder = looseTransforms;
+      break;
+
+    case 'known':
+      rowTransformHolder = transformRow;
+      break;
+  }
+
+  switch (colVar) {
+    case 'cfg':
+    case 'step':
+    case 'artist':
+    case 'seed': {
+      // build the col headers
+      let colHeaders = diffSummary[colVar] ?? [mainImage[colVar]];
+
+      extraChoiceMap[colVar].forEach((c) =>
+        colHeaders.push(colVar === 'artist' ? c : +c)
+      );
+
+      // make sure they are unique
+      colHeaders = uniq(colHeaders);
+
+      colHeaders.sort((a, b) => a - b);
+
+      // generate placeholders from row/col transforms
+
+      colTransformHolder = generateSimpleTransformHolder(
+        'col simple',
+        colHeaders,
+        colVar
+      );
+      break;
+    }
+
+    case 'loose':
+      colTransformHolder = looseTransforms;
+      break;
+
+    case 'known':
+      colTransformHolder = transformCol;
+      break;
+  }
+
+  console.log('rowTransformHolder', { rowTransformHolder, colTransformHolder });
+
+  const tableData = generateTableFromXform(
+    rowTransformHolder,
+    colTransformHolder,
+    mainImage,
+    data,
+    visibleIds
+  );
+
   const [imageSize, setImageSize] = useState(200);
+
+  const handleAddLooseTransform = (t: SdImageTransform) => {
+    setLooseTransforms(
+      produce(looseTransforms, (draft) => {
+        draft.transforms.push(t);
+      })
+    );
+  };
+
+  console.log('looseTransforms', looseTransforms);
 
   return (
     <div>
       <Title order={1}>grid of images</Title>
       <Title order={2}>transform chooser</Title>
-      <Stack>
-        <ImageTransformChooser
-          holder={transformRow}
-          onChange={setTransformRow}
-        />
-        <ImageTransformChooser
-          holder={transformCol}
-          onChange={setTransformCol}
-        />
-      </Stack>
-      <Switch
-        checked={isFromXForm}
-        onChange={setIsFromXForm}
-        label="should build grid from xform"
-      />
+
       <Stack>
         <Group>
           <b>row var</b>
@@ -202,6 +239,12 @@ export function ImageGrid(props: ImageGridProps) {
               <Radio key={choice} value={choice} label={choice} />
             ))}
           </Radio.Group>
+
+          <ImageTransformChooser
+            holder={transformRow}
+            onChange={setTransformRow}
+            disabled={rowVar !== 'known'}
+          />
         </Group>
         <Group>
           <b>col var</b>
@@ -210,6 +253,12 @@ export function ImageGrid(props: ImageGridProps) {
               <Radio key={choice} value={choice} label={choice} />
             ))}
           </Radio.Group>
+
+          <ImageTransformChooser
+            holder={transformCol}
+            onChange={setTransformCol}
+            disabled={colVar !== 'known'}
+          />
         </Group>
       </Stack>
       <div> {isLoading ? 'loading...' : ''} </div>
@@ -261,21 +310,16 @@ export function ImageGrid(props: ImageGridProps) {
           <thead>
             <tr>
               <th />
-              {colHeaders.map((col) => (
-                <th key={col}>{Array.isArray(col) ? col.join(' + ') : col}</th>
+              {colTransformHolder.transforms.map((col, idx) => (
+                <th key={idx}>{col.type}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {tableData.map((row, rowIndex) => {
-              const rowHeader = rowHeaders[rowIndex];
               return (
                 <tr key={rowIndex}>
-                  <td>
-                    {Array.isArray(rowHeader)
-                      ? rowHeader.join(' + ')
-                      : rowHeader}
-                  </td>
+                  <td>{rowTransformHolder.transforms[rowIndex].type}</td>
 
                   {row.map((cell, colIndex) => {
                     if (cell === undefined) {
@@ -296,7 +340,7 @@ export function ImageGrid(props: ImageGridProps) {
                       );
                     }
                     return (
-                      <td key={cell?.id ?? colIndex}>
+                      <td key={colIndex}>
                         <SdImageComp image={cell} size={imageSize} />
                       </td>
                     );
@@ -310,100 +354,12 @@ export function ImageGrid(props: ImageGridProps) {
 
       <Stack>
         <Title order={1}>all images in group</Title>
-        <Table>
-          <thead>
-            <tr>
-              <th>image</th>
-              <th>prompt</th>
-              <th>cfg</th>
-              <th>seed</th>
-              <th>steps</th>
-              <th>visible</th>
-              <th />
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {data?.map((item) => {
-              const imgJson = JSON.stringify(item, null, 2);
-              const baseDelta = findImageDifferences(mainImage, item, {
-                shouldReportAddRemove: false,
-              });
-              const baseDeltaJson = JSON.stringify(baseDelta, null, 2);
-              return (
-                <tr key={item.id}>
-                  <td>
-                    <SdImageComp image={item} size={150} />{' '}
-                  </td>
-                  <td>{getTextForBreakdown(item.promptBreakdown)}</td>
-                  <td>{item.cfg}</td>
-                  <td>{item.seed}</td>
-                  <td>{item.steps}</td>
-                  <td>
-                    {visibleIds.find((c) => c === item.id) !== undefined
-                      ? 'true'
-                      : ''}
-                  </td>
-                  <td>
-                    <Popover closeOnClickOutside>
-                      <Popover.Dropdown>
-                        <div style={{ width: 600 }}>
-                          <b>JSON for image</b>
-                          <CopyButton value={imgJson}>
-                            {({ copied, copy }) => (
-                              <Button
-                                color={copied ? 'teal' : 'blue'}
-                                onClick={copy}
-                              >
-                                {copied ? 'Copied url' : 'Copy url'}
-                              </Button>
-                            )}
-                          </CopyButton>
-                          <JsonInput value={imgJson} minRows={10} />
-                        </div>
-                      </Popover.Dropdown>
-                      <Popover.Target>
-                        <Button>JSON</Button>
-                      </Popover.Target>
-                    </Popover>
-                  </td>
-                  <td>
-                    <Popover closeOnClickOutside>
-                      <Popover.Dropdown>
-                        <div style={{ width: 600 }}>
-                          <b>JSON for image</b>
-                          <CopyButton value={baseDeltaJson}>
-                            {({ copied, copy }) => (
-                              <Button
-                                color={copied ? 'teal' : 'blue'}
-                                onClick={copy}
-                              >
-                                {copied ? 'Copied url' : 'Copy url'}
-                              </Button>
-                            )}
-                          </CopyButton>
-                          <JsonInput
-                            value={baseDeltaJson}
-                            size="xl"
-                            minRows={10}
-                          />
-                        </div>
-                      </Popover.Dropdown>
-                      <Popover.Target>
-                        <Button>deltas</Button>
-                      </Popover.Target>
-                    </Popover>
-                    <div>
-                      {baseDelta.map((delta, idx) => (
-                        <div key={idx}>{JSON.stringify(delta)}</div>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </Table>
+        <SdGroupTable
+          data={data}
+          mainImage={mainImage}
+          visibleItems={visibleIds}
+          onNewTransform={handleAddLooseTransform}
+        />
         <div>
           <Title order={4}>all differences</Title>
           <pre>{JSON.stringify(diffSummary, null, 2)}</pre>
@@ -413,47 +369,24 @@ export function ImageGrid(props: ImageGridProps) {
   );
 }
 
-function generateTableDataFromChoices(
-  rowHeaders: any,
-  rowVar: string,
-  colHeaders: any,
-  colVar: string,
-  mainImage: SdImage,
-  data: SdImage[],
-  visibleIds: string[]
-): SdImageGrid {
-  const tableDataChoices = [];
-  rowHeaders.map((rowHeader, row) => {
-    tableDataChoices.push([]);
-
-    const rowTransformTemp = generateTransformFromSimplerHeader(
-      rowVar,
-      rowHeader
-    );
-
-    colHeaders.map((colHeader, col) => {
-      const colTransformTemp = generateTransformFromSimplerHeader(
-        colVar,
-        colHeader
+function generateSimpleTransformHolder(
+  name: string,
+  uniqValues: any[],
+  rowVar: string
+) {
+  const holder: ImageTransformHolder = {
+    name,
+    transforms: uniqValues.map((rowHeader) => {
+      const rowTransformTemp = generateTransformFromSimplerHeader(
+        rowVar,
+        rowHeader
       );
 
-      const placeholder = generatePlaceholderForTransforms(mainImage, [
-        rowTransformTemp,
-        colTransformTemp,
-      ]);
+      return rowTransformTemp;
+    }),
+  };
 
-      const found = data.find((img) =>
-        isImageSameAsPlaceHolder(img, placeholder)
-      );
-
-      if (found) {
-        visibleIds.push(found.id);
-      }
-
-      tableDataChoices[row][col] = found ?? placeholder;
-    });
-  });
-  return tableDataChoices;
+  return holder;
 }
 
 function generateTransformFromSimplerHeader(rowVar: string, rowHeader: any) {

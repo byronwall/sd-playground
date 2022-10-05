@@ -1,8 +1,10 @@
 import {
+  PromptBreakdown,
   PromptBreakdownSortOrder,
   SdImage,
   SdImagePlaceHolder,
   SdImageTransform,
+  SdImageTransformNonMulti,
 } from '@sd-playground/shared-types';
 import * as cloneDeep from 'clone-deep';
 import { isEqual, orderBy } from 'lodash-es';
@@ -28,7 +30,7 @@ function sortPromptBreakdown(item: SdImage | SdImagePlaceHolder) {
 }
 
 export function summarizeAllDifferences(base: SdImage, allImages: SdImage[]) {
-  const results: SdImageTransform[] = [];
+  const results: SdImageTransformNonMulti[] = [];
 
   if (base === undefined || allImages === undefined || allImages.length === 0) {
     return results;
@@ -44,7 +46,7 @@ export function summarizeAllDifferences(base: SdImage, allImages: SdImage[]) {
   // take all of those and build a unique summary
 
   const summary = results.reduce((acc, cur) => {
-    if (cur.type === 'num-delta') {
+    if (cur.type === 'num-delta' || cur.type === 'none') {
       // skip deltas -- they won't appear
       return acc;
     }
@@ -98,8 +100,8 @@ export function findImageDifferences(
   base: SdImage,
   comp: SdImage,
   { shouldReportAddRemove = true } = {}
-): SdImageTransform[] {
-  const results: SdImageTransform[] = [];
+): SdImageTransformNonMulti[] {
+  const results: SdImageTransformNonMulti[] = [];
 
   // find the differences between the base and the comp
 
@@ -116,11 +118,28 @@ export function findImageDifferences(
   }
 
   // find the differences in the prompt breakdown
+  const breakdownDeltas = getBreakdownDelta(
+    base.promptBreakdown,
+    comp.promptBreakdown,
+    shouldReportAddRemove
+  );
+
+  results.push(...breakdownDeltas);
+
+  return results;
+}
+
+export function getBreakdownDelta(
+  baseBreakdown: PromptBreakdown,
+  compBreakdown: PromptBreakdown,
+  shouldReportAddRemove: boolean
+) {
+  const breakdownDeltas: SdImageTransformNonMulti[] = [];
   for (const breakdownType of PromptBreakdownSortOrder) {
-    const baseParts = base.promptBreakdown.parts.filter(
+    const baseParts = baseBreakdown.parts.filter(
       (c) => c.label === breakdownType
     );
-    const compParts = comp.promptBreakdown.parts.filter(
+    const compParts = compBreakdown.parts.filter(
       (c) => c.label === breakdownType
     );
 
@@ -132,7 +151,7 @@ export function findImageDifferences(
       const removed = baseText.filter((c) => !compText.includes(c));
 
       if (added.length > 0) {
-        results.push({
+        breakdownDeltas.push({
           type: 'text',
           field: breakdownType,
           action: 'add',
@@ -141,7 +160,7 @@ export function findImageDifferences(
       }
 
       if (removed.length > 0) {
-        results.push({
+        breakdownDeltas.push({
           type: 'text',
           field: breakdownType,
           action: 'remove',
@@ -150,7 +169,7 @@ export function findImageDifferences(
       }
     } else {
       if (!isEqual(baseParts, compParts)) {
-        results.push({
+        breakdownDeltas.push({
           type: 'text',
           field: breakdownType,
           action: 'set',
@@ -159,8 +178,7 @@ export function findImageDifferences(
       }
     }
   }
-
-  return results;
+  return breakdownDeltas;
 }
 
 export function generatePlaceholderForTransforms(
@@ -168,7 +186,13 @@ export function generatePlaceholderForTransforms(
   transform: SdImageTransform[]
 ): SdImagePlaceHolder {
   const finalImage = transform.reduce((acc, cur) => {
-    acc = generatePlaceholderForTransform(acc, cur);
+    if (cur.type === 'multi') {
+      cur.transforms.forEach((c) => {
+        acc = generatePlaceholderForTransform(acc, c);
+      });
+    } else {
+      acc = generatePlaceholderForTransform(acc, cur);
+    }
     return acc;
   }, cloneDeep(baseImage));
 
@@ -193,6 +217,11 @@ export function generatePlaceholderForTransform(
       // TODO: apply a min/max
       placeholder[transform.field] += transform.delta;
       break;
+
+    case 'multi':
+      console.error('multi transforms not supported');
+      break;
+
     case 'text': {
       if (placeholder.promptBreakdown === undefined) {
         break;

@@ -25,7 +25,7 @@ interface PromptEditorProps {
 
 function useControlledUncontrolled<T>(
   initialValue: T,
-  onChange: (newPrompt: T) => void,
+  onChange: (newPrompt: T) => void | undefined,
   defaultValue: T
 ) {
   const [prompt, setPrompt] = useState<T>(initialValue ?? defaultValue);
@@ -37,20 +37,14 @@ function useControlledUncontrolled<T>(
 
   // communicate a change in state back to the props
   useEffect(() => {
-    onChange(prompt);
+    onChange?.(prompt);
   }, [prompt, onChange]);
 
   return [prompt, setPrompt] as const;
 }
 
 export function PromptEditor(props: PromptEditorProps) {
-  const {
-    // initialPrompt,
-    // onPromptChange,
-    initialBreakdown,
-    onBreakdownChange,
-    ...rest
-  } = props;
+  const { initialBreakdown, onBreakdownChange, ...rest } = props;
 
   // controlled and uncontrolled updates
   const [prompt, setPrompt] = useControlledUncontrolled(
@@ -118,11 +112,9 @@ export function PromptEditor(props: PromptEditorProps) {
     <div {...rest}>
       <Title order={2}>prompt editor</Title>
       {/* switch for isFancy */}
-      <Textarea
-        label="prompt"
-        value={simpleText}
-        onChange={(evt) => handleRawTextChange(evt.target.value)}
-        style={{ minWidth: 400 }}
+      <TextAreaWithButton
+        defaultText={simpleText}
+        onChange={handleRawTextChange}
       />
       <div>
         <div>
@@ -194,6 +186,45 @@ export function PromptEditor(props: PromptEditorProps) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function TextAreaWithButton(props: {
+  onChange: (newText: string) => void;
+  defaultText: string;
+}) {
+  const { onChange, defaultText } = props;
+
+  const [text, setText] = useState('');
+
+  const handleAccept = () => {
+    onChange(text);
+  };
+
+  useEffect(() => {
+    setText(defaultText);
+  }, [defaultText]);
+
+  const isDirty = text !== defaultText;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      <Textarea
+        label="prompt"
+        value={text}
+        onChange={(evt) => setText(evt.target.value)}
+        style={{ minWidth: 400, flex: 1 }}
+      />
+      <Button onClick={handleAccept} disabled={!isDirty}>
+        accept
+      </Button>
     </div>
   );
 }

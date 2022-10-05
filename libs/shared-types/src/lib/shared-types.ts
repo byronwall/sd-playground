@@ -53,7 +53,11 @@ export const PromptBreakdownSortOrder = [
   'unknown',
 ] as const;
 
-export function getTextForBreakdown(breakdown: PromptBreakdown) {
+export function getTextForBreakdown(breakdown: PromptBreakdown | undefined) {
+  if (breakdown === undefined) {
+    return '';
+  }
+
   // sort based on type
   const sortedParts = [...breakdown.parts].sort((a, b) => {
     return (
@@ -96,7 +100,23 @@ export interface SdImageTransformText {
   value: string | string[];
 }
 
-export type SdImageTransform =
+export interface SdImageTransformMulti {
+  type: 'multi';
+  transforms: SdImageTransform[];
+}
+
+export interface SdImageTransformNone {
+  type: 'none';
+}
+
+export const TransformNone: SdImageTransformNone = {
+  type: 'none',
+} as const;
+
+export type SdImageTransformNonMulti =
   | SdImageTransformNumberRaw
   | SdImageTransformNumberDelta
-  | SdImageTransformText;
+  | SdImageTransformText
+  | SdImageTransformNone;
+
+export type SdImageTransform = SdImageTransformNonMulti | SdImageTransformMulti;
