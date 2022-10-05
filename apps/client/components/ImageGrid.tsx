@@ -7,7 +7,6 @@ import {
   Table,
   Title,
 } from '@mantine/core';
-import { useListState } from '@mantine/hooks';
 import {
   PromptBreakdownSortOrder,
   SdImage,
@@ -67,7 +66,15 @@ const seedChoices = [
 
 const artistChoices = artists.map((c) => ({ value: 'by ' + c, label: c }));
 
-const variableChoices = ['cfg', 'seed', 'steps', 'artist', 'loose', 'known'];
+const variableChoices = [
+  'cfg',
+  'seed',
+  'steps',
+  'artist',
+  'unknown',
+  'loose',
+  'known',
+] as const;
 
 export function ImageGrid(props: ImageGridProps) {
   console.log('ImageGrid - render');
@@ -119,13 +126,16 @@ export function ImageGrid(props: ImageGridProps) {
   const visibleIds: string[] = [];
 
   // add in the must show items from drop down
-  const extraChoiceMap = {
-    seed: seedChoice,
-    cfg: cfgChoice,
-    steps: stepsChoice,
-    artist: artistChoice,
-    known: [],
-  };
+  const extraChoiceMap: { [key in typeof variableChoices[number]]: string[] } =
+    {
+      seed: seedChoice,
+      cfg: cfgChoice,
+      steps: stepsChoice,
+      artist: artistChoice,
+      unknown: [],
+      loose: [],
+      known: [],
+    };
 
   const diffSummary = summarizeAllDifferences(mainImage, data);
 
@@ -134,75 +144,23 @@ export function ImageGrid(props: ImageGridProps) {
     transforms: [TransformNone],
   });
 
-  let rowTransformHolder: ImageTransformHolder;
-  let colTransformHolder: ImageTransformHolder;
+  const rowTransformHolder: ImageTransformHolder = createTransformHolder(
+    rowVar,
+    diffSummary,
+    mainImage,
+    extraChoiceMap,
+    looseTransforms,
+    transformRow
+  );
 
-  switch (rowVar) {
-    case 'cfg':
-    case 'step':
-    case 'artist':
-    case 'seed': {
-      // build the row headers
-      let rowHeaders = diffSummary[rowVar] ?? [mainImage[rowVar]];
-      extraChoiceMap[rowVar].forEach((c) =>
-        rowHeaders.push(rowVar === 'artist' ? c : +c)
-      );
-
-      rowHeaders = uniq(rowHeaders);
-      rowHeaders.sort((a, b) => a - b);
-
-      rowTransformHolder = generateSimpleTransformHolder(
-        'row simple',
-        rowHeaders,
-        rowVar
-      );
-
-      break;
-    }
-    case 'loose':
-      rowTransformHolder = looseTransforms;
-      break;
-
-    case 'known':
-      rowTransformHolder = transformRow;
-      break;
-  }
-
-  switch (colVar) {
-    case 'cfg':
-    case 'step':
-    case 'artist':
-    case 'seed': {
-      // build the col headers
-      let colHeaders = diffSummary[colVar] ?? [mainImage[colVar]];
-
-      extraChoiceMap[colVar].forEach((c) =>
-        colHeaders.push(colVar === 'artist' ? c : +c)
-      );
-
-      // make sure they are unique
-      colHeaders = uniq(colHeaders);
-
-      colHeaders.sort((a, b) => a - b);
-
-      // generate placeholders from row/col transforms
-
-      colTransformHolder = generateSimpleTransformHolder(
-        'col simple',
-        colHeaders,
-        colVar
-      );
-      break;
-    }
-
-    case 'loose':
-      colTransformHolder = looseTransforms;
-      break;
-
-    case 'known':
-      colTransformHolder = transformCol;
-      break;
-  }
+  const colTransformHolder: ImageTransformHolder = createTransformHolder(
+    colVar,
+    diffSummary,
+    mainImage,
+    extraChoiceMap,
+    looseTransforms,
+    transformCol
+  );
 
   console.log('rowTransformHolder', { rowTransformHolder, colTransformHolder });
 
@@ -306,12 +264,16 @@ export function ImageGrid(props: ImageGridProps) {
           />
         </Group>
 
-        <Table>
+        <Table
+          style={{
+            tableLayout: 'fixed',
+          }}
+        >
           <thead>
             <tr>
               <th />
               {colTransformHolder.transforms.map((col, idx) => (
-                <th key={idx}>{col.type}</th>
+                <th key={idx}>{getDescForTransform(col)}</th>
               ))}
             </tr>
           </thead>
@@ -319,7 +281,11 @@ export function ImageGrid(props: ImageGridProps) {
             {tableData.map((row, rowIndex) => {
               return (
                 <tr key={rowIndex}>
-                  <td>{rowTransformHolder.transforms[rowIndex].type}</td>
+                  <td>
+                    {getDescForTransform(
+                      rowTransformHolder.transforms[rowIndex]
+                    )}
+                  </td>
 
                   {row.map((cell, colIndex) => {
                     if (cell === undefined) {
@@ -367,6 +333,56 @@ export function ImageGrid(props: ImageGridProps) {
       </Stack>
     </div>
   );
+}
+
+function createTransformHolder(
+  rowVar: string,
+  diffSummary: any,
+  mainImage: SdImage,
+  extraChoiceMap: {
+    seed: string[];
+    cfg: string[];
+    steps: string[];
+    artist: string[];
+    known: any[];
+  },
+  looseTransforms: ImageTransformHolder,
+  transformRow: ImageTransformHolder
+) {
+  let rowTransformHolder: ImageTransformHolder;
+
+  switch (rowVar) {
+    case 'cfg':
+    case 'step':
+    case 'artist':
+    case 'unknown':
+    case 'seed': {
+      // build the row headers
+      let rowHeaders = diffSummary[rowVar] ?? [mainImage[rowVar]];
+      extraChoiceMap[rowVar].forEach((c) =>
+        rowHeaders.push(rowVar === 'artist' ? c : +c)
+      );
+
+      rowHeaders = uniq(rowHeaders);
+      rowHeaders.sort((a, b) => a - b);
+
+      rowTransformHolder = generateSimpleTransformHolder(
+        'row simple',
+        rowHeaders,
+        rowVar
+      );
+
+      break;
+    }
+    case 'loose':
+      rowTransformHolder = looseTransforms;
+      break;
+
+    case 'known':
+      rowTransformHolder = transformRow;
+      break;
+  }
+  return rowTransformHolder;
 }
 
 function generateSimpleTransformHolder(
@@ -443,4 +459,23 @@ function generateTableFromXform(
     }
   }
   return tableData;
+}
+
+function getDescForTransform(transform: SdImageTransform): string {
+  switch (transform.type) {
+    case 'multi':
+      return 'multi';
+    case 'text':
+      return `${transform.field} = ${
+        Array.isArray(transform.value)
+          ? transform.value.join(' + ')
+          : transform.value
+      }`;
+    case 'num-raw':
+      return `${transform.field} = ${transform.value}`;
+    case 'num-delta':
+      return `${transform.field} = ${transform.delta}`;
+  }
+
+  return '';
 }

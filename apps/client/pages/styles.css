@@ -10,8 +10,8 @@ html {
 body {
   font-family: inherit;
   line-height: inherit;
-  margin: auto;
-  max-width: 1200px;
+  /* margin: auto; */
+  /* max-width: 1200px; */
 
   padding-bottom: 150px;
 }
