@@ -7,9 +7,9 @@ import {
   getUuid,
   ImageGenRequest,
 } from '@sd-playground/shared-types';
-import { exec } from 'child_process';
 import * as cors from 'cors';
 import * as express from 'express';
+import { generateAsync } from 'stability-client';
 
 import * as x from '../env.json';
 import {
@@ -63,7 +63,7 @@ app.get('/api/images', async (req, res) => {
   res.send(images);
 });
 
-app.post('/api/img_gen', (req, res) => {
+app.post('/api/img_gen', async (req, res) => {
   const imgGenReq: ImageGenRequest = req.body as ImageGenRequest;
 
   console.log('image gen req', imgGenReq);
@@ -77,21 +77,23 @@ app.post('/api/img_gen', (req, res) => {
   const groupId = imgGenReq.groupId;
   const promptBreakdown = imgGenReq.promptBreakdown;
 
-  const cmd = `cd ${pathToImg} && STABILITY_KEY=${x.STABILITY_KEY} python3 -m stability_sdk.client -W 512 -H 512 -S ${seed} --cfg ${cfg} --steps ${steps} "${prompt}"`;
+  try {
+    const { images } = (await generateAsync({
+      apiKey: x.STABILITY_KEY,
+      seed,
+      cfgScale: cfg,
+      steps,
+      prompt,
+      height: 512,
+      width: 512,
+      samples: 1,
+      outDir: pathToImg,
+      debug: true,
+      noStore: false,
+    })) as any;
 
-  const imgRegex = /wrote ARTIFACT_IMAGE to (.*?.png)/;
-
-  const child = exec(cmd, async (error, stdout, stderr) => {
-    if (error) {
-      console.error(+new Date(), `error: ${error.message}`);
-
-      // match again regex
-
-      return;
-    }
-
-    if (stderr) {
-      const match = stderr.match(imgRegex);
+    if (images.length > 0) {
+      const result = images[0];
 
       await db_insertImage({
         id: getUuid(),
@@ -99,24 +101,17 @@ app.post('/api/img_gen', (req, res) => {
         seed,
         cfg,
         steps,
-        url: match[1],
+        url: result.filePath.replace(pathToImg + '/', ''),
         dateCreated: new Date().toISOString(),
         groupId: groupId ?? getUuid(),
       });
-
-      if (match) {
-        res.send({ imageUrl: match[1] });
-      }
-
-      return;
     }
 
-    console.log(`stdout:\n${stdout}`);
-  });
-
-  child.on('exit', () => {
-    console.log(+new Date(), 'process completed -- go find the image?');
-  });
+    res.send({ result: true });
+  } catch (e: any) {
+    console.log('error', e);
+    res.send({ result: false });
+  }
 });
 
 // serve images using an absolute path (".." not allowed)
