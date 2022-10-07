@@ -1,5 +1,13 @@
 # Changelog
 
+## 2022-10-06 21:31:55
+
+- Rework image storage and access to use S3
+
+## 2022-10-05 22:39:56
+
+- Swap out the Python SDK for a JS one
+
 ## 2022-10-04 20:59:52
 
 - Rework common libs to avoid importing lodash on the server

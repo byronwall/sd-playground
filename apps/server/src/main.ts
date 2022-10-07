@@ -18,6 +18,7 @@ import {
   db_getSingleImages,
   db_insertImage,
 } from './db';
+import { getImagesFromS3, uploadImageToS3 } from './s3_helpers';
 
 const pathToImg = `/Users/byronwall/Projects/sd-playground/apps/server/ext`;
 
@@ -95,13 +96,23 @@ app.post('/api/img_gen', async (req, res) => {
     if (images.length > 0) {
       const result = images[0];
 
+      const fileKey = result.filePath.replace(pathToImg + '/', '');
+
+      const s3res = await uploadImageToS3({
+        filename: result.filePath,
+        key: fileKey,
+        mimetype: 'image/png',
+      });
+
+      // need to load to S3
+
       await db_insertImage({
         id: getUuid(),
         promptBreakdown,
         seed,
         cfg,
         steps,
-        url: result.filePath.replace(pathToImg + '/', ''),
+        url: fileKey,
         dateCreated: new Date().toISOString(),
         groupId: groupId ?? getUuid(),
       });
@@ -114,8 +125,19 @@ app.post('/api/img_gen', async (req, res) => {
   }
 });
 
-// serve images using an absolute path (".." not allowed)
-app.use('/img', express.static(pathToImg));
+app.get('/img/:key', async (req, res) => {
+  const key = (req.params as any).key;
+
+  // load image from S3
+  try {
+    const s3res = await getImagesFromS3({ key });
+
+    (s3res.Body as any).pipe(res);
+  } catch (e: any) {
+    console.log('error', e);
+    res.status(500).send('error');
+  }
+});
 
 const port = +process.env.port || 3333;
 const server = app.listen(port, () => {
