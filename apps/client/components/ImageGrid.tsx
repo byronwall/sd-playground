@@ -353,7 +353,7 @@ function createTransformHolder(
 
   switch (rowVar) {
     case 'cfg':
-    case 'step':
+    case 'steps':
     case 'artist':
     case 'unknown':
     case 'seed': {

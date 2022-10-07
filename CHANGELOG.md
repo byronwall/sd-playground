@@ -3,6 +3,7 @@
 ## 2022-10-06 21:31:55
 
 - Rework image storage and access to use S3
+- Resolve issue related to `steps` not working as a choice
 
 ## 2022-10-05 22:39:56
 
