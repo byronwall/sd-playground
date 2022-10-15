@@ -1,5 +1,11 @@
 # Changelog
 
+## 2022-10-15 00:23:01
+
+- Move to supabase for the database -- pushed all existing images into database
+  - This removes the need for sqlite
+- Update stability client to resolve error
+
 ## 2022-10-06 21:31:55
 
 - Rework image storage and access to use S3

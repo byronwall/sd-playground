@@ -43,8 +43,6 @@ app.get('/api/images/:id', async (req, res) => {
 
   const images = await db_getSingleImages(id);
 
-  console.log('images', images);
-
   res.send(images);
 });
 app.get('/api/images/group/:id', async (req, res) => {
@@ -55,8 +53,6 @@ app.get('/api/images/group/:id', async (req, res) => {
   console.log('group of  image', groupId);
 
   const images = await db_getImagesFromGroup(groupId);
-
-  console.log('images', images);
 
   res.send(images);
 });
