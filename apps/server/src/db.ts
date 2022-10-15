@@ -4,6 +4,14 @@ import * as fs from 'fs';
 import { join } from 'path';
 import { Database } from 'sqlite3';
 
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+console.log('Connecting to database...', supabase);
+
 // import path
 // Open a SQLite database, stored in the file db.sqlite
 let db: Database;
@@ -15,6 +23,30 @@ const err = (err: Error): void => {
   console.log('Connected to the database.');
 };
 const dbPath = 'db.sqlite';
+
+function pushImagesIntoSupabase() {
+  // one time thing to move current images into supabase
+
+  console.log('pushing images into supabase');
+  connectToDatabase();
+
+  // get all images from sqlite
+  db.all('SELECT * FROM images', (err, rows) => {
+    if (err) {
+      throw err;
+    }
+    rows.forEach(async (row) => {
+      const { data, error } = await supabase.from('images').insert(row);
+
+      if (error) {
+        console.log('error', error);
+      }
+      if (data) {
+        console.log('data', data);
+      }
+    });
+  });
+}
 
 function connectToDatabase() {
   db = new Database(dbPath, err);
@@ -111,3 +143,5 @@ export function db_insertImage(image: SdImage) {
     );
   });
 }
+
+// pushImagesIntoSupabase();

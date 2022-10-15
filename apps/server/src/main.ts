@@ -2,6 +2,12 @@
  * This is not a production server yet!
  * This is only a minimal backend to get started.
  */
+
+import * as dotenv from 'dotenv'; // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
+dotenv.config();
+
+console.log('process.env', process.env);
+
 import {
   getTextForBreakdown,
   getUuid,
