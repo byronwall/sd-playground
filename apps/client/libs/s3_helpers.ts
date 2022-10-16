@@ -4,13 +4,12 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import * as fs from 'fs';
-import * as env_json from '../env.json';
 
 const s3 = new S3Client({
-  region: env_json.AWS_REGION,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: env_json.AWS_ACCESS_KEY_ID,
-    secretAccessKey: env_json.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
 
@@ -29,7 +28,7 @@ export async function uploadImageToS3(file: FileUploadS3) {
 
   // upload image to s3
   const params = {
-    Bucket: env_json.AWS_BUCKET_NAME,
+    Bucket: process.env.AWS_BUCKET_NAME,
     Key: file.key,
     Body: fileStream,
   };
@@ -40,10 +39,9 @@ export async function uploadImageToS3(file: FileUploadS3) {
 }
 
 export async function getImagesFromS3(file: FileDownloadS3) {
-  // get images from s3
   const downloadParams = {
     Key: file.key,
-    Bucket: env_json.AWS_BUCKET_NAME,
+    Bucket: process.env.AWS_BUCKET_NAME,
   };
 
   const command = new GetObjectCommand(downloadParams);

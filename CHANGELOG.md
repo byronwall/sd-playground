@@ -6,6 +6,7 @@
   - Split into pages
   - Remove bad image groups
   - Move server to /api folder
+  - Move all secrets into .env file for environment access
 
 ## 2022-10-15 00:23:01
 

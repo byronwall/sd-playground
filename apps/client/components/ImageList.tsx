@@ -8,19 +8,16 @@ import { ImageTransformBuilder } from './ImageTransform';
 import { SdImageComp } from './SdImageComp';
 
 export function getImageUrl(imageUrl: string): string {
-  return `http://localhost:3333/img/${imageUrl}`;
+  return `/api/images/s3/${imageUrl}`;
 }
 
 export function ImageList() {
   const { data, isLoading, isError, error } = useQuery('images', async () => {
-    const res = await fetch('http://localhost:3333/api/images');
+    const res = await fetch('/api/images');
     const results = (await res.json()) as SdImage[];
     results.sort((a, b) => b.dateCreated.localeCompare(a.dateCreated));
     return results;
   });
-
-  // store focused id in state
-  const [focusedId, setFocusedId] = useState<string | null>(null);
 
   const imageGroups = (data ?? []).reduce<{ [id: string]: SdImage[] }>(
     (acc, cur) => {

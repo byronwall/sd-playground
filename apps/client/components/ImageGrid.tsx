@@ -89,9 +89,7 @@ export function ImageGrid(props: ImageGridProps) {
     isError,
     error,
   } = useQuery(groupId, async () => {
-    const res = await fetch(
-      `http://localhost:3333/api/images/group/${props.groupId}`
-    );
+    const res = await fetch(`/api/images/group/${props.groupId}`);
     const results = (await res.json()) as SdImage[];
     return results;
   });
