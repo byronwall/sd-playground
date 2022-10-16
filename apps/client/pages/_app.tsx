@@ -15,7 +15,7 @@ export default function App(props: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <Head>
-        <title>Page title</title>
+        <title>Latent Quest</title>
         <meta
           name="viewport"
           content="minimum-scale=1, initial-scale=1, width=device-width"

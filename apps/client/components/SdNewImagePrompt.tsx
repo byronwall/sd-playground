@@ -10,6 +10,7 @@ import {
   getBreakdownForText,
   PromptBreakdown,
 } from '@sd-playground/shared-types';
+import { useRouter } from 'next/router';
 import { useState } from 'react';
 import { useQueryClient } from 'react-query';
 import { api_generateImage } from '../model/api';
@@ -33,9 +34,11 @@ export function SdNewImagePrompt() {
 
   const queryClient = useQueryClient();
 
+  const router = useRouter();
+
   const onGen = async () => {
     setIsLoading(true);
-    await api_generateImage({
+    const img = await api_generateImage({
       promptBreakdown: breakdown,
       cfg: cfg,
       steps: steps,
@@ -43,6 +46,8 @@ export function SdNewImagePrompt() {
     });
     setIsLoading(false);
     queryClient.invalidateQueries();
+
+    router.push(`/group/${img.groupId}`);
   };
 
   return (

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2022-10-15 21:04:38
+
+- Planned
+  - Split into pages
+  - Remove bad image groups
+  - Move server to /api folder
+
 ## 2022-10-15 00:23:01
 
 - Move to supabase for the database -- pushed all existing images into database

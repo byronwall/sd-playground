@@ -12,6 +12,7 @@ import {
   getTextForBreakdown,
   getUuid,
   ImageGenRequest,
+  SdImage,
 } from '@sd-playground/shared-types';
 import * as cors from 'cors';
 import * as express from 'express';
@@ -106,9 +107,7 @@ app.post('/api/img_gen', async (req, res) => {
         mimetype: 'image/png',
       });
 
-      // need to load to S3
-
-      await db_insertImage({
+      const imgResult: SdImage = {
         id: getUuid(),
         promptBreakdown,
         seed,
@@ -117,7 +116,13 @@ app.post('/api/img_gen', async (req, res) => {
         url: fileKey,
         dateCreated: new Date().toISOString(),
         groupId: groupId ?? getUuid(),
-      });
+      };
+      // need to load to S3
+
+      await db_insertImage(imgResult);
+
+      res.send(imgResult);
+      return;
     }
 
     res.send({ result: true });

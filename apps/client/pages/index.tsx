@@ -1,15 +1,16 @@
 import { Container } from '@mantine/core';
+import Link from 'next/link';
 
 import { ImageList } from '../components/ImageList';
-import { SdNewImagePrompt } from '../components/SdNewImagePrompt';
 
 export function Index() {
   return (
-    <Container size="lg">
-      <SdNewImagePrompt />
-
+    <>
+      <Link href="/create">
+        <a>create new image</a>
+      </Link>
       <ImageList />
-    </Container>
+    </>
   );
 }
 

@@ -27,6 +27,7 @@ export type ImageGenRequest = SdImagePlaceHolder;
 
 export interface ImageGenResponse {
   imageUrl: string;
+  groupId: string;
 }
 
 export function getUuid() {

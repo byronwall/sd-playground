@@ -1,11 +1,10 @@
 import { Card, SimpleGrid } from '@mantine/core';
 import { SdImage } from '@sd-playground/shared-types';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
 
-import { ImageGrid } from './ImageGrid';
 import { ImageTransformBuilder } from './ImageTransform';
-import { ImageTransformChooser } from './ImageTransformChooser';
 import { SdImageComp } from './SdImageComp';
 
 export function getImageUrl(imageUrl: string): string {
@@ -50,18 +49,18 @@ export function ImageList() {
             const img = group[0];
             return (
               <Card key={img.id}>
-                <div onClick={() => setFocusedId(img.groupId)}>
-                  <SdImageComp image={img} size={200} disablePopover />
-                  <p>total items = {group.length}</p>
-                </div>
+                <Link href={`/group/${img.groupId}`}>
+                  <div>
+                    <SdImageComp image={img} size={200} disablePopover />
+                    <p>total items = {group.length}</p>
+                  </div>
+                </Link>
               </Card>
             );
           })}
         </SimpleGrid>
 
         <ImageTransformBuilder />
-
-        <ImageGrid groupId={focusedId} />
       </div>
     </div>
   );
